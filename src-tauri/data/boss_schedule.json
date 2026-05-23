@@ -1,0 +1,579 @@
+{
+  "_meta": {
+    "description": "GW2 world boss & meta event schedule. All times in UTC. Generated from wiki.guildwars2.com/wiki/World_boss + meta event wiki pages.",
+    "source": "https://wiki.guildwars2.com/wiki/World_boss",
+    "last_verified": "2026-05-24",
+    "format_version": "1.0"
+  },
+  "world_bosses": [
+    {
+      "id": "svanir_shaman_chief",
+      "name": "Svanir Shaman Chief",
+      "tier": "low",
+      "map": "Wayfarer Foothills",
+      "area": "Hunter's Lake",
+      "waypoint_code": "[&BMIDAAA=]",
+      "schedule_utc": [
+        "00:15",
+        "02:15",
+        "04:15",
+        "06:15",
+        "08:15",
+        "10:15",
+        "12:15",
+        "14:15",
+        "16:15",
+        "18:15",
+        "20:15",
+        "22:15"
+      ],
+      "duration_minutes": 5,
+      "wiki_event": "The Frozen Maw"
+    },
+    {
+      "id": "fire_elemental",
+      "name": "Fire Elemental",
+      "tier": "low",
+      "map": "Metrica Province",
+      "area": "Thaumanova Reactor",
+      "waypoint_code": "[&BEwAAAA=]",
+      "schedule_utc": [
+        "00:45",
+        "02:45",
+        "04:45",
+        "06:45",
+        "08:45",
+        "10:45",
+        "12:45",
+        "14:45",
+        "16:45",
+        "18:45",
+        "20:45",
+        "22:45"
+      ],
+      "duration_minutes": 5,
+      "wiki_event": "Thaumanova Reactor Fallout"
+    },
+    {
+      "id": "shadow_behemoth",
+      "name": "Shadow Behemoth",
+      "tier": "low",
+      "map": "Queensdale",
+      "area": "Godslost Swamp",
+      "waypoint_code": "[&BPgAAAA=]",
+      "schedule_utc": [
+        "01:45",
+        "03:45",
+        "05:45",
+        "07:45",
+        "09:45",
+        "11:45",
+        "13:45",
+        "15:45",
+        "17:45",
+        "19:45",
+        "21:45",
+        "23:45"
+      ],
+      "duration_minutes": 15,
+      "wiki_event": "Secrets in the Swamp"
+    },
+    {
+      "id": "great_jungle_wurm",
+      "name": "Great Jungle Wurm",
+      "tier": "low",
+      "map": "Caledon Forest",
+      "area": "Wychmire Swamp",
+      "waypoint_code": "[&BEEFAAA=]",
+      "schedule_utc": [
+        "01:15",
+        "03:15",
+        "05:15",
+        "07:15",
+        "09:15",
+        "11:15",
+        "13:15",
+        "15:15",
+        "17:15",
+        "19:15",
+        "21:15",
+        "23:15"
+      ],
+      "duration_minutes": 10,
+      "wiki_event": "The Battle for Wychmire Swamp"
+    },
+    {
+      "id": "modniir_ulgoth",
+      "name": "Modniir Ulgoth",
+      "tier": "standard",
+      "map": "Harathi Hinterlands",
+      "area": "Modniir Gorge",
+      "waypoint_code": "[&BBkCAAA=]",
+      "schedule_utc": [
+        "01:30",
+        "04:30",
+        "07:30",
+        "10:30",
+        "13:30",
+        "16:30",
+        "19:30",
+        "22:30"
+      ],
+      "duration_minutes": 15,
+      "wiki_event": "Seraph Assault on Centaur Camps"
+    },
+    {
+      "id": "admiral_taidha_covington",
+      "name": "Admiral Taidha Covington",
+      "tier": "standard",
+      "map": "Bloodtide Coast",
+      "area": "Laughing Gull Island",
+      "waypoint_code": "[&BKgBAAA=]",
+      "schedule_utc": [
+        "00:00",
+        "03:00",
+        "06:00",
+        "09:00",
+        "12:00",
+        "15:00",
+        "18:00",
+        "21:00"
+      ],
+      "duration_minutes": 10,
+      "wiki_event": "The Campaign Against Taidha Covington"
+    },
+    {
+      "id": "shatterer",
+      "name": "The Shatterer",
+      "tier": "standard",
+      "map": "Blazeridge Steppes",
+      "area": "Lowland Burns",
+      "waypoint_code": "[&BE4FAAA=]",
+      "schedule_utc": [
+        "01:00",
+        "04:00",
+        "07:00",
+        "10:00",
+        "13:00",
+        "16:00",
+        "19:00",
+        "22:00"
+      ],
+      "duration_minutes": 10,
+      "wiki_event": "Kralkatorrik's Legacy"
+    },
+    {
+      "id": "megadestroyer",
+      "name": "Megadestroyer",
+      "tier": "standard",
+      "map": "Mount Maelstrom",
+      "area": "Maelstrom's Bile",
+      "waypoint_code": "[&BNQCAAA=]",
+      "schedule_utc": [
+        "00:30",
+        "03:30",
+        "06:30",
+        "09:30",
+        "12:30",
+        "15:30",
+        "18:30",
+        "21:30"
+      ],
+      "duration_minutes": 10,
+      "wiki_event": "The Battle for Mount Maelstrom"
+    },
+    {
+      "id": "golem_mark_ii",
+      "name": "Inquest Golem Mark II",
+      "tier": "standard",
+      "map": "Mount Maelstrom",
+      "area": "Whitland Flats",
+      "waypoint_code": "[&BNQCAAA=]",
+      "schedule_utc": [
+        "02:00",
+        "05:00",
+        "08:00",
+        "11:00",
+        "14:00",
+        "17:00",
+        "20:00",
+        "23:00"
+      ],
+      "duration_minutes": 10,
+      "wiki_event": "Defeat the Inquest's golem Mark II"
+    },
+    {
+      "id": "claw_of_jormag",
+      "name": "Claw of Jormag",
+      "tier": "standard",
+      "map": "Frostgorge Sound",
+      "area": "Frostwalk Tundra",
+      "waypoint_code": "[&BHoCAAA=]",
+      "schedule_utc": [
+        "02:30",
+        "05:30",
+        "08:30",
+        "11:30",
+        "14:30",
+        "17:30",
+        "20:30",
+        "23:30"
+      ],
+      "duration_minutes": 15,
+      "wiki_event": "Breaking the Claw of Jormag"
+    },
+    {
+      "id": "tequatl",
+      "name": "Tequatl the Sunless",
+      "tier": "hardcore",
+      "map": "Sparkfly Fen",
+      "area": "Splintered Coast",
+      "waypoint_code": "[&BNABAAA=]",
+      "schedule_utc": [
+        "00:00",
+        "03:00",
+        "07:00",
+        "11:30",
+        "16:00",
+        "19:00",
+        "23:30"
+      ],
+      "duration_minutes": 30,
+      "wiki_event": "Defeat Tequatl the Sunless"
+    },
+    {
+      "id": "triple_trouble",
+      "name": "Evolved Jungle Wurm (Triple Trouble)",
+      "tier": "hardcore",
+      "map": "Bloodtide Coast",
+      "area": "Firth of Revanion",
+      "waypoint_code": "[&BKgBAAA=]",
+      "schedule_utc": [
+        "01:00",
+        "04:00",
+        "08:00",
+        "12:30",
+        "17:00",
+        "20:00"
+      ],
+      "duration_minutes": 30,
+      "wiki_event": "Triple Trouble"
+    },
+    {
+      "id": "karka_queen",
+      "name": "Karka Queen",
+      "tier": "hardcore",
+      "map": "Southsun Cove",
+      "area": "Driftglass Springs",
+      "waypoint_code": "[&BNcGAAA=]",
+      "schedule_utc": [
+        "02:00",
+        "06:00",
+        "10:30",
+        "15:00",
+        "18:00",
+        "23:00"
+      ],
+      "duration_minutes": 10,
+      "wiki_event": "Defeat the Karka Queen threatening the settlements"
+    }
+  ],
+  "meta_events": [
+    {
+      "id": "dragons_stand",
+      "name": "Dragon's Stand",
+      "expansion": "HoT",
+      "map": "Dragon's Stand",
+      "cycle_minutes": 120,
+      "anchor_utc": "00:30",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Map active / lanes",
+          "duration_minutes": 90
+        },
+        {
+          "offset_minutes": 90,
+          "name": "Mouth of Mordremoth",
+          "duration_minutes": 30
+        }
+      ]
+    },
+    {
+      "id": "verdant_brink",
+      "name": "Night and the Enemy",
+      "expansion": "HoT",
+      "map": "Verdant Brink",
+      "cycle_minutes": 120,
+      "anchor_utc": "01:45",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Daytime",
+          "duration_minutes": 75
+        },
+        {
+          "offset_minutes": 75,
+          "name": "Night",
+          "duration_minutes": 25
+        },
+        {
+          "offset_minutes": 100,
+          "name": "Night Bosses",
+          "duration_minutes": 20
+        }
+      ]
+    },
+    {
+      "id": "auric_basin",
+      "name": "Battle in Tarir",
+      "expansion": "HoT",
+      "map": "Auric Basin",
+      "cycle_minutes": 120,
+      "anchor_utc": "00:45",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Pylons",
+          "duration_minutes": 75
+        },
+        {
+          "offset_minutes": 75,
+          "name": "Octovine",
+          "duration_minutes": 20
+        },
+        {
+          "offset_minutes": 95,
+          "name": "Reward",
+          "duration_minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "tangled_depths",
+      "name": "Chak Gerent",
+      "expansion": "HoT",
+      "map": "Tangled Depths",
+      "cycle_minutes": 120,
+      "anchor_utc": "00:25",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Prep",
+          "duration_minutes": 85
+        },
+        {
+          "offset_minutes": 85,
+          "name": "Chak Gerent",
+          "duration_minutes": 20
+        }
+      ]
+    },
+    {
+      "id": "domain_of_istan",
+      "name": "Palawadan",
+      "expansion": "PoF",
+      "map": "Domain of Istan",
+      "cycle_minutes": 120,
+      "anchor_utc": "01:45",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Palawadan",
+          "duration_minutes": 30
+        }
+      ]
+    },
+    {
+      "id": "elon_riverlands",
+      "name": "The Path to Ascension: Augury Rock",
+      "expansion": "PoF",
+      "map": "Elon Riverlands",
+      "cycle_minutes": 120,
+      "anchor_utc": "01:00",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Augury Rock",
+          "duration_minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "desolation",
+      "name": "Junundu Rising",
+      "expansion": "PoF",
+      "map": "The Desolation",
+      "cycle_minutes": 120,
+      "anchor_utc": "00:30",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Junundu Rising",
+          "duration_minutes": 20
+        }
+      ]
+    },
+    {
+      "id": "domain_of_vabbi",
+      "name": "Forged with Fire / Serpents' Ire",
+      "expansion": "PoF",
+      "map": "Domain of Vabbi",
+      "cycle_minutes": 60,
+      "anchor_utc": "00:00",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Forged with Fire",
+          "duration_minutes": 15
+        },
+        {
+          "offset_minutes": 30,
+          "name": "Serpents' Ire",
+          "duration_minutes": 30
+        }
+      ]
+    },
+    {
+      "id": "dragons_end",
+      "name": "The Battle for the Jade Sea",
+      "expansion": "EoD",
+      "map": "Dragon's End",
+      "cycle_minutes": 120,
+      "anchor_utc": "00:05",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Prep",
+          "duration_minutes": 60
+        },
+        {
+          "offset_minutes": 60,
+          "name": "Soo-Won",
+          "duration_minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "echovald_wilds",
+      "name": "Aetherblade Assault",
+      "expansion": "EoD",
+      "map": "Echovald Wilds",
+      "cycle_minutes": 120,
+      "anchor_utc": "01:00",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Aetherblade Assault",
+          "duration_minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "seitung_province",
+      "name": "Aetherblade Assault",
+      "expansion": "EoD",
+      "map": "Seitung Province",
+      "cycle_minutes": 120,
+      "anchor_utc": "01:30",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Aetherblade Assault",
+          "duration_minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "new_kaineng",
+      "name": "Kaineng Blackout",
+      "expansion": "EoD",
+      "map": "New Kaineng City",
+      "cycle_minutes": 120,
+      "anchor_utc": "00:00",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Kaineng Blackout",
+          "duration_minutes": 40
+        }
+      ]
+    },
+    {
+      "id": "skywatch_archipelago",
+      "name": "Defense of Amnytas",
+      "expansion": "SotO",
+      "map": "Skywatch Archipelago",
+      "cycle_minutes": 120,
+      "anchor_utc": "01:00",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Defense of Amnytas",
+          "duration_minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "amnytas",
+      "name": "Defense of Amnytas",
+      "expansion": "SotO",
+      "map": "Amnytas",
+      "cycle_minutes": 120,
+      "anchor_utc": "01:30",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Defense of Amnytas",
+          "duration_minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "lowland_shore",
+      "name": "Convergences (Lowland Shore)",
+      "expansion": "JW",
+      "map": "Lowland Shore",
+      "cycle_minutes": 120,
+      "anchor_utc": "01:30",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Convergence",
+          "duration_minutes": 25
+        }
+      ]
+    },
+    {
+      "id": "janthir_syntri",
+      "name": "Janthir Syntri Meta",
+      "expansion": "JW",
+      "map": "Janthir Syntri",
+      "cycle_minutes": 120,
+      "anchor_utc": "00:30",
+      "phases": [
+        {
+          "offset_minutes": 0,
+          "name": "Meta",
+          "duration_minutes": 25
+        }
+      ]
+    }
+  ],
+  "ley_line_anomaly": {
+    "id": "ley_line_anomaly",
+    "name": "Ley-Line Anomaly",
+    "schedule_utc": [
+      "06:00",
+      "14:00",
+      "22:00"
+    ],
+    "duration_minutes": 20,
+    "rotation_maps": [
+      "Iron Marches",
+      "Timberline Falls",
+      "Gendarran Fields"
+    ],
+    "wiki_event": "Ley-Line Anomaly"
+  }
+}

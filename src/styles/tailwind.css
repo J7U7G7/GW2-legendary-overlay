@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent-color: #7fb069;
+  --text-color: #e8e8e8;
+  --bg-color: #000000;
+  --bg-opacity: 0.85;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: transparent;
+  color: var(--text-color);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
