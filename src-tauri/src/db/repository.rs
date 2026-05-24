@@ -17,7 +17,6 @@ impl Db {
         Self::init(conn)
     }
 
-    #[cfg(test)]
     pub fn open_in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;
         Self::init(conn)

@@ -1,44 +1,80 @@
 pub mod api;
 pub mod db;
 pub mod error;
+pub mod sync;
 mod commands;
 mod scorer;
-mod sync;
 mod timers;
 
 use std::fs;
+use std::sync::Arc;
 
 use tauri::Manager;
-use tracing::{error, info};
+use tokio::sync::Mutex;
+use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
+use crate::api::auth::load_api_key;
+use crate::api::client::ApiClient;
+use crate::commands::AppState;
 use crate::db::repository::Db;
+use crate::sync::engine::SyncEngine;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tracing_subscriber::fmt()
+    let _ = tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info,gw2_overlay_lib=debug")),
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info,gw2_overlay_lib=debug")),
         )
-        .init();
+        .try_init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::cmd_set_api_key,
+            commands::cmd_check_api_key,
+            commands::cmd_clear_api_key,
+            commands::cmd_sync_now,
+        ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");
             fs::create_dir_all(&app_dir)?;
             let db_path = app_dir.join("gw2-overlay.sqlite");
             info!(?db_path, "opening database");
 
-            let db = match Db::open(&db_path) {
-                Ok(db) => db,
+            let db = Arc::new(Db::open(&db_path).map_err(|e| {
+                error!(error = %e, "failed to open database");
+                e
+            })?);
+            info!(achievements = db.count_achievements().unwrap_or(-1), "database ready");
+
+            // If a key is already stored, build the client + engine eagerly so
+            // sync starts at boot. Otherwise the UI will prompt for one.
+            let engine = match load_api_key(&db) {
+                Ok(Some(key)) => match ApiClient::new(Some(key)) {
+                    Ok(client) => {
+                        let engine = SyncEngine::new(Arc::new(client), Arc::clone(&db));
+                        engine.start();
+                        info!("sync engine started with stored API key");
+                        Some(engine)
+                    }
+                    Err(e) => {
+                        warn!(error = %e, "failed to build API client from stored key");
+                        None
+                    }
+                },
+                Ok(None) => {
+                    info!("no stored API key, waiting for user to provide one");
+                    None
+                }
                 Err(e) => {
-                    error!(error = %e, "failed to open database");
-                    return Err(Box::new(e));
+                    warn!(error = %e, "failed to load stored API key");
+                    None
                 }
             };
-            info!(achievements = db.count_achievements().unwrap_or(-1), "database ready");
-            app.manage(db);
+
+            app.manage(AppState { db, engine: Mutex::new(engine) });
             Ok(())
         })
         .run(tauri::generate_context!())

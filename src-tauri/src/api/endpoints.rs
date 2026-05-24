@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::api::client::ApiClient;
 use crate::error::{AppError, Result};
@@ -81,7 +81,7 @@ pub struct AchievementDetail {
     pub icon: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AchievementTier {
     pub count: u32,
     pub points: i32,

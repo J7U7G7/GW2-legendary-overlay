@@ -8,7 +8,9 @@
 use gw2_overlay_lib::api::auth::ApiKey;
 use gw2_overlay_lib::api::client::ApiClient;
 use gw2_overlay_lib::api::endpoints;
+use gw2_overlay_lib::db::repository::Db;
 use gw2_overlay_lib::error::AppError;
+use gw2_overlay_lib::sync;
 
 fn client_from_env() -> ApiClient {
     let raw = std::env::var("GW2_API_KEY")
@@ -73,6 +75,19 @@ async fn wizardsvault_weekly_parses() {
         wv.meta_progress_complete,
         wv.objectives.len()
     );
+}
+
+#[tokio::test]
+#[ignore = "hits real GW2 API (42 paged requests, ~10s); needs GW2_API_KEY"]
+async fn full_achievement_definitions_sync() {
+    let c = client_from_env();
+    let db = Db::open_in_memory().expect("in-memory db");
+    let n = sync::achievements::sync_all_definitions(&c, &db).await.expect("full sync");
+    println!("synced {n} achievement definitions");
+    assert!(n > 8000, "expected > 8000 achievements, got {n}");
+    let in_db = db.count_achievements().expect("count");
+    assert_eq!(n as i64, in_db);
+    assert!(sync::achievements::has_full_sync(&db).expect("flag"));
 }
 
 /// Documents the deprecation: `/v2/achievements/daily` returns 503 since the
