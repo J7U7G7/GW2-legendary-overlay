@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAppStore } from "../store/app";
+import { stripGw2Markup } from "../lib/format";
 import type { PinnedBit, PinnedBossGroup, PinnedItem } from "../types/gw2";
 
 function wikiUrl(query: string) {
@@ -8,20 +9,21 @@ function wikiUrl(query: string) {
 }
 
 function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
-  const hasText = bit.text !== null && bit.text.trim().length > 0;
+  const cleanText = stripGw2Markup(bit.text);
+  const hasText = cleanText.length > 0;
+  const cleanName = stripGw2Markup(bit.resolved_name);
   const primaryLabel =
-    bit.resolved_name ??
+    cleanName ||
     (hasText
-      ? bit.text!
+      ? cleanText
       : bit.ref_id !== null
         ? `${bit.kind} #${bit.ref_id}`
         : bit.kind);
   // Sub-line: the in-game "how to get it" text plus the API item description.
   const subLines: string[] = [];
-  if (hasText && bit.text !== bit.resolved_name) subLines.push(bit.text!);
-  if (bit.resolved_description && bit.resolved_description.trim().length > 0) {
-    subLines.push(bit.resolved_description);
-  }
+  if (hasText && cleanText !== cleanName) subLines.push(cleanText);
+  const cleanDesc = stripGw2Markup(bit.resolved_description);
+  if (cleanDesc.length > 0) subLines.push(cleanDesc);
   const wikiQuery = bit.resolved_name
     ? bit.resolved_name
     : bit.ref_id !== null && bit.kind !== "Text"
@@ -72,14 +74,12 @@ function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
 }
 
 function AchievementDetails({ item }: { item: PinnedItem }) {
+  const desc = stripGw2Markup(item.description);
+  const req = stripGw2Markup(item.requirement);
   return (
     <div className="pl-6 pr-3 pb-1.5 pt-0.5 text-[10px] opacity-90 leading-snug">
-      {item.description && (
-        <p className="opacity-80 mb-1">{item.description}</p>
-      )}
-      {item.requirement && (
-        <p className="opacity-70 italic mb-1">{item.requirement}</p>
-      )}
+      {desc && <p className="opacity-80 mb-1 whitespace-pre-line">{desc}</p>}
+      {req && <p className="opacity-70 italic mb-1 whitespace-pre-line">{req}</p>}
       <a
         className="text-[var(--accent-color)] opacity-80 hover:opacity-100 underline text-[10px]"
         href={wikiUrl(item.name)}

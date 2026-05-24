@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { useHotkeys, HOTKEY_LABELS } from "../hooks/useHotkeys";
 import { useAppStore, type ViewKey } from "../store/app";
 import { ApiKeySetup } from "./ApiKeySetup";
 import { CatalogView } from "./CatalogView";
@@ -36,6 +37,8 @@ export function Overlay() {
     void checkApiKey();
   }, [checkApiKey]);
 
+  useHotkeys();
+
   const hasUsableKey = apiKeyStatus !== null && apiKeyStatus.permissions_ok;
 
   return (
@@ -69,12 +72,19 @@ export function Overlay() {
               </div>
             )}
           </div>
-          {summary && (
-            <footer className="px-3 py-1 text-[10px] opacity-50 border-t border-white/10 font-mono shrink-0">
-              {summary.account_done}/{summary.account_tracked} done · {summary.points_earned} AP ·
-              cache: {summary.total_achievements_in_cache}
-            </footer>
-          )}
+          <footer className="px-3 py-1 text-[10px] opacity-50 border-t border-white/10 font-mono shrink-0 flex items-center justify-between gap-3">
+            {summary ? (
+              <span>
+                {summary.account_done}/{summary.account_tracked} done · {summary.points_earned} AP
+              </span>
+            ) : (
+              <span />
+            )}
+            <span title="Hotkeys" className="opacity-70">
+              {HOTKEY_LABELS.toggleVisibility} show/hide · {HOTKEY_LABELS.toggleClickThrough}{" "}
+              click-through
+            </span>
+          </footer>
         </>
       )}
     </main>

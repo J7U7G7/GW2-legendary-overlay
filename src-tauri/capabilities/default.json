@@ -7,6 +7,13 @@
     "core:default",
     "core:window:allow-start-dragging",
     "core:window:allow-set-cursor-grab",
-    "opener:default"
+    "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-is-visible",
+    "opener:default",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister-all",
+    "global-shortcut:allow-is-registered"
   ]
 }
