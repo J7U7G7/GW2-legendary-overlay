@@ -5,9 +5,11 @@ import {
   unregisterAll,
 } from "@tauri-apps/plugin-global-shortcut";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 const TOGGLE_VISIBILITY = "CmdOrCtrl+Shift+G";
 const TOGGLE_CLICKTHROUGH = "CmdOrCtrl+Shift+H";
+const TOGGLE_EVENTS = "CmdOrCtrl+Shift+E";
 
 // Module-level state: we want one canonical "is the overlay click-through?"
 // flag shared across the (potentially re-mounted) hook so a second mount
@@ -30,6 +32,17 @@ async function toggleClickThrough() {
   await getCurrentWindow().setIgnoreCursorEvents(clickThroughOn);
 }
 
+async function toggleEventsWindow() {
+  const w = await WebviewWindow.getByLabel("events");
+  if (!w) return;
+  if (await w.isVisible()) {
+    await w.hide();
+  } else {
+    await w.show();
+    await w.setFocus();
+  }
+}
+
 export function useHotkeys() {
   useEffect(() => {
     let cancelled = false;
@@ -43,6 +56,9 @@ export function useHotkeys() {
         });
         await register(TOGGLE_CLICKTHROUGH, (e) => {
           if (e.state === "Pressed") void toggleClickThrough();
+        });
+        await register(TOGGLE_EVENTS, (e) => {
+          if (e.state === "Pressed") void toggleEventsWindow();
         });
       } catch (err) {
         console.warn("hotkey registration failed:", err);
@@ -69,4 +85,5 @@ export async function isHotkeyRegistered(shortcut: string): Promise<boolean> {
 export const HOTKEY_LABELS = {
   toggleVisibility: TOGGLE_VISIBILITY,
   toggleClickThrough: TOGGLE_CLICKTHROUGH,
+  toggleEvents: TOGGLE_EVENTS,
 };

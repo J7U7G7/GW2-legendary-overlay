@@ -37,6 +37,17 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .on_window_event(|window, event| {
+            // Closing the secondary events window hides it instead of
+            // killing the whole app. The primary "main" window keeps the
+            // default behavior (close = quit).
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == "events" {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             commands::cmd_set_api_key,
             commands::cmd_check_api_key,
@@ -112,12 +123,14 @@ pub fn run() {
 
             app.manage(AppState { db, engine: Mutex::new(engine), schedule });
 
-            // Explicitly restore previously-saved window position/size.
-            // The plugin doesn't override the config-declared size on its own,
-            // so we have to trigger the restore from setup.
-            if let Some(window) = app.get_webview_window("main") {
-                if let Err(e) = window.restore_state(StateFlags::all()) {
-                    warn!(error = %e, "window state restore failed");
+            // Explicitly restore previously-saved window position/size for
+            // both windows. The plugin doesn't override config-declared size
+            // on its own, so we trigger the restore from setup.
+            for label in ["main", "events"] {
+                if let Some(window) = app.get_webview_window(label) {
+                    if let Err(e) = window.restore_state(StateFlags::all()) {
+                        warn!(label, error = %e, "window state restore failed");
+                    }
                 }
             }
             Ok(())

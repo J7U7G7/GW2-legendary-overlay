@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import { useHotkeys, HOTKEY_LABELS } from "../hooks/useHotkeys";
 import { useAppStore, type ViewKey } from "../store/app";
 import { useSettingsStore } from "../store/settings";
 import { ApiKeySetup } from "./ApiKeySetup";
 import { CatalogView } from "./CatalogView";
-import { EventsTab } from "./EventsTab";
 import { PinnedPanel } from "./PinnedPanel";
 import { SearchView } from "./SearchView";
 import { SettingsPanel } from "./SettingsPanel";
@@ -15,11 +15,18 @@ import { WizardsVaultPanel } from "./WizardsVaultPanel";
 type TabConfig = { id: ViewKey; label: string };
 const TABS: TabConfig[] = [
   { id: "pinned", label: "Pinned" },
-  { id: "events", label: "Events" },
   { id: "catalog", label: "Catalog" },
   { id: "search", label: "Search" },
   { id: "wv", label: "WV" },
 ];
+
+async function showEventsWindow() {
+  const w = await WebviewWindow.getByLabel("events");
+  if (w) {
+    await w.show();
+    await w.setFocus();
+  }
+}
 
 export function Overlay() {
   const apiKeyStatus = useAppStore((s) => s.apiKeyStatus);
@@ -60,6 +67,7 @@ export function Overlay() {
         onSync={() => void triggerSync()}
         onClearKey={() => void clearApiKey()}
         onToggleSettings={() => setSettingsOpen(!settingsOpen)}
+        onShowEvents={() => void showEventsWindow()}
       />
 
       {settingsOpen ? (
@@ -71,7 +79,6 @@ export function Overlay() {
           <Tabs current={view} onSelect={setView} pinnedCount={pinnedCount} />
           <div className="flex-1 flex flex-col overflow-hidden">
             {view === "pinned" && <PinnedPanel />}
-            {view === "events" && <EventsTab />}
             {view === "catalog" && <CatalogView />}
             {view === "search" && <SearchView />}
             {view === "wv" && (
@@ -91,8 +98,8 @@ export function Overlay() {
               <span />
             )}
             <span title="Hotkeys" className="opacity-70">
-              {HOTKEY_LABELS.toggleVisibility} show/hide · {HOTKEY_LABELS.toggleClickThrough}{" "}
-              click-through
+              {HOTKEY_LABELS.toggleVisibility} hide · {HOTKEY_LABELS.toggleClickThrough} c-through ·{" "}
+              {HOTKEY_LABELS.toggleEvents} events
             </span>
           </footer>
         </>
@@ -109,6 +116,7 @@ function Header(props: {
   onSync: () => void;
   onClearKey: () => void;
   onToggleSettings: () => void;
+  onShowEvents: () => void;
 }) {
   // Use the JS API explicitly because Tauri 2's data-tauri-drag-region
   // attribute injection didn't trigger drag on this user's environment.
@@ -147,6 +155,14 @@ function Header(props: {
             )}
           </button>
         )}
+        <button
+          type="button"
+          onClick={props.onShowEvents}
+          className="px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
+          title="Show events window"
+        >
+          📅
+        </button>
         <button
           type="button"
           onClick={props.onToggleSettings}

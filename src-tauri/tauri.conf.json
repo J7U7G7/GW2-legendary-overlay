@@ -21,7 +21,21 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "resizable": true,
-        "shadow": false
+        "shadow": false,
+        "url": "index.html#main"
+      },
+      {
+        "label": "events",
+        "title": "GW2 Events",
+        "width": 340,
+        "height": 500,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": true,
+        "shadow": false,
+        "url": "index.html#events"
       }
     ],
     "security": {
