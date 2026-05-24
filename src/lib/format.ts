@@ -35,3 +35,58 @@ export function fillRequirement(
 export function wikiUrl(name: string): string {
   return `https://wiki.guildwars2.com/wiki/${encodeURIComponent(name.replace(/ /g, "_"))}`;
 }
+
+function shortDuration(ms: number): string {
+  const sec = Math.floor(ms / 1000);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return `${h}h${String(m).padStart(2, "0")}`;
+  return `${m}m`;
+}
+
+export type EventStatus = "future" | "active" | "ended";
+
+export type EventTimeLabel = {
+  status: EventStatus;
+  /** Short human label, e.g. "in 12m", "active · 8m left", "ended". */
+  label: string;
+  /** Minutes until the event starts (negative if already started). */
+  minutesUntilStart: number;
+  /** Minutes until the event ends (negative if already ended). */
+  minutesUntilEnd: number;
+};
+
+export function eventTimeLabel(
+  startIso: string,
+  durationMinutes: number,
+  now: number,
+): EventTimeLabel {
+  const startMs = new Date(startIso).getTime();
+  const endMs = startMs + durationMinutes * 60_000;
+  const diffStart = startMs - now;
+  const diffEnd = endMs - now;
+  const minutesUntilStart = Math.floor(diffStart / 60_000);
+  const minutesUntilEnd = Math.floor(diffEnd / 60_000);
+  if (diffStart > 0) {
+    return {
+      status: "future",
+      label: `in ${shortDuration(diffStart)}`,
+      minutesUntilStart,
+      minutesUntilEnd,
+    };
+  }
+  if (diffEnd > 0) {
+    return {
+      status: "active",
+      label: `active · ${shortDuration(diffEnd)} left`,
+      minutesUntilStart,
+      minutesUntilEnd,
+    };
+  }
+  return {
+    status: "ended",
+    label: "ended",
+    minutesUntilStart,
+    minutesUntilEnd,
+  };
+}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAppStore } from "../store/app";
-import { fillRequirement, stripGw2Markup } from "../lib/format";
+import { eventTimeLabel, fillRequirement, stripGw2Markup } from "../lib/format";
 import type { PinnedBit, PinnedBossGroup, PinnedItem } from "../types/gw2";
 
 function searchWikiUrl(query: string) {
@@ -95,16 +95,6 @@ function AchievementDetails({ item }: { item: PinnedItem }) {
       </a>
     </div>
   );
-}
-
-function formatCountdown(targetIso: string, now: number): string {
-  const diff = new Date(targetIso).getTime() - now;
-  if (diff <= 0) return "now";
-  const sec = Math.floor(diff / 1000);
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}h${String(m).padStart(2, "0")}`;
-  return `${m}m`;
 }
 
 function ProgressBar({ ratio }: { ratio: number }) {
@@ -249,16 +239,19 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
       : group.explicitly_pinned
         ? `Unpin ${group.boss_name}`
         : `Unpin ${group.achievements.length} linked achievement(s)`;
+  const time = eventTimeLabel(group.next_spawn, group.duration_minutes, now);
 
-  const mins = Math.max(0, Math.floor((new Date(group.next_spawn).getTime() - now) / 60000));
-  const isImminent = mins <= 10;
-  const isSoon = mins <= 120;
+  const isActive = time.status === "active";
+  const isImminent = time.status === "future" && time.minutesUntilStart <= 10;
+  const isSoon = time.status === "future" && time.minutesUntilStart <= 120;
 
-  const bandClass = isImminent
-    ? "border-l-4 border-amber-300 bg-amber-400/15"
-    : isSoon
-      ? "border-l-4 border-amber-300/60 bg-amber-400/5"
-      : "border-l-4 border-white/10";
+  const bandClass = isActive
+    ? "border-l-4 border-green-400 bg-green-400/10"
+    : isImminent
+      ? "border-l-4 border-amber-300 bg-amber-400/15"
+      : isSoon
+        ? "border-l-4 border-amber-300/60 bg-amber-400/5"
+        : "border-l-4 border-white/10";
 
   const hasAchievements = group.achievements.length > 0;
   const remaining = group.achievements.filter((a) => !a.done).length;
@@ -269,15 +262,19 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
       <header className="px-3 py-1.5 flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-xs">
-            <span className={`font-semibold ${isImminent ? "text-amber-300" : ""}`}>
+            <span
+              className={`font-semibold ${isActive ? "text-green-300" : isImminent ? "text-amber-300" : ""}`}
+            >
               {group.boss_name}
             </span>
             <span className="opacity-40">·</span>
             <span className="opacity-70 truncate">📍 {group.boss_map}</span>
           </div>
           <div className="flex items-center gap-2 text-[10px] mt-0.5">
-            <span className={`font-mono ${isImminent ? "text-amber-300" : "opacity-80"}`}>
-              ⏰ in {formatCountdown(group.next_spawn, now)}
+            <span
+              className={`font-mono ${isActive ? "text-green-300 font-semibold" : isImminent ? "text-amber-300" : "opacity-80"}`}
+            >
+              ⏰ {time.label}
             </span>
             <WaypointButton code={group.waypoint_code} name={group.boss_name} />
             {hasAchievements && (

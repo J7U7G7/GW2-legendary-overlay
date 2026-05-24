@@ -1,17 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAppStore } from "../store/app";
+import { eventTimeLabel } from "../lib/format";
 import type { EventView } from "../types/gw2";
-
-function formatCountdown(targetIso: string, now: number): string {
-  const diff = new Date(targetIso).getTime() - now;
-  if (diff <= 0) return "now";
-  const sec = Math.floor(diff / 1000);
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  if (h > 0) return `${h}h${String(m).padStart(2, "0")}`;
-  return `${m}m`;
-}
 
 function WaypointButton({ code, name }: { code: string | null; name?: string }) {
   const [copied, setCopied] = useState(false);
@@ -42,21 +33,33 @@ function WaypointButton({ code, name }: { code: string | null; name?: string }) 
 function EventRow({ event, now }: { event: EventView; now: number }) {
   const pinBoss = useAppStore((s) => s.pinBoss);
   const unpinBoss = useAppStore((s) => s.unpinBoss);
-  const mins = Math.max(0, Math.floor((new Date(event.next_spawn).getTime() - now) / 60000));
-  const isImminent = mins <= 10;
+  const t = eventTimeLabel(event.next_spawn, event.duration_minutes, now);
+  const isActive = t.status === "active";
+  const isImminent = t.status === "future" && t.minutesUntilStart <= 10;
+  const rowBg = isActive
+    ? "bg-green-400/15"
+    : isImminent
+      ? "bg-amber-400/10"
+      : "";
+  const nameClass = isActive
+    ? "text-green-300 font-semibold"
+    : isImminent
+      ? "text-amber-300 font-semibold"
+      : "";
+  const timeClass = isActive
+    ? "text-green-300 font-semibold"
+    : "opacity-80";
 
   return (
     <li
-      className={`px-3 py-1 flex items-center justify-between gap-2 border-b border-white/5 ${isImminent ? "bg-amber-400/10" : ""}`}
+      className={`px-3 py-1 flex items-center justify-between gap-2 border-b border-white/5 ${rowBg}`}
     >
       <div className="flex-1 min-w-0">
-        <div className={`truncate text-xs ${isImminent ? "text-amber-300 font-semibold" : ""}`}>
-          {event.name}
-        </div>
+        <div className={`truncate text-xs ${nameClass}`}>{event.name}</div>
         <div className="text-[10px] opacity-60 truncate">📍 {event.map}</div>
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
-        <span className="font-mono text-[10px] opacity-80">{formatCountdown(event.next_spawn, now)}</span>
+        <span className={`font-mono text-[10px] ${timeClass}`}>{t.label}</span>
         <WaypointButton code={event.waypoint_code} name={event.name} />
         {event.pinned ? (
           <button

@@ -3,6 +3,33 @@ use serde::Serialize;
 
 use crate::timers::schedule::{MetaEvent, Schedule, WorldBoss, parse_hm};
 
+/// Compute the most recent spawn time at or before `now`, whether or not
+/// that spawn is still within its duration window. Returns None only if the
+/// boss has an empty schedule (degenerate data).
+pub fn prev_spawn(boss: &WorldBoss, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
+    let today_midnight = today_midnight_utc(now);
+    let today: Vec<DateTime<Utc>> = boss
+        .schedule_utc
+        .iter()
+        .filter_map(|s| parse_hm(s).ok())
+        .map(|(h, m)| today_midnight + Duration::hours(h as i64) + Duration::minutes(m as i64))
+        .collect();
+
+    if let Some(latest_today) = today.iter().filter(|t| **t <= now).max().copied() {
+        return Some(latest_today);
+    }
+
+    // No today's spawn at or before now → fall back to yesterday's last spawn
+    // (covers very early-UTC moments like 00:30 for a boss whose first daily
+    // slot is at 01:45).
+    let yesterday_midnight = today_midnight - Duration::days(1);
+    boss.schedule_utc
+        .iter()
+        .filter_map(|s| parse_hm(s).ok())
+        .map(|(h, m)| yesterday_midnight + Duration::hours(h as i64) + Duration::minutes(m as i64))
+        .max()
+}
+
 /// Compute the next spawn time for a world boss strictly after `now`.
 /// The schedule_utc entries are local-to-day spawn times; if all of today's
 /// spawns are past, we roll over to the first spawn tomorrow.
@@ -125,23 +152,51 @@ pub fn all_upcoming(schedule: &Schedule, now: DateTime<Utc>, horizon_minutes: i6
     let mut out = Vec::new();
 
     for boss in &schedule.world_bosses {
-        let t = next_spawn(boss, now);
-        if t <= horizon {
-            out.push(UpcomingEvent {
-                id: boss.id.clone(),
-                name: boss.name.clone(),
-                map: boss.map.clone(),
-                kind: UpcomingKind::WorldBoss,
-                start_at: t,
-                duration_minutes: boss.duration_minutes,
-                waypoint_code: boss.waypoint_code.clone(),
-            });
-        }
+        // First: is the boss currently in its duration window?
+        let active = prev_spawn(boss, now).and_then(|prev| {
+            let end = prev + Duration::minutes(boss.duration_minutes as i64);
+            if now < end { Some(prev) } else { None }
+        });
+        let start_at = match active {
+            Some(t) => t,
+            None => {
+                let t = next_spawn(boss, now);
+                if t > horizon {
+                    continue;
+                }
+                t
+            }
+        };
+        out.push(UpcomingEvent {
+            id: boss.id.clone(),
+            name: boss.name.clone(),
+            map: boss.map.clone(),
+            kind: UpcomingKind::WorldBoss,
+            start_at,
+            duration_minutes: boss.duration_minutes,
+            waypoint_code: boss.waypoint_code.clone(),
+        });
     }
     for meta in &schedule.meta_events {
         let instant = current_meta_phase(meta, now);
-        if instant.next.starts_at <= horizon {
-            // duration of the *next* phase
+        // If a phase is active right now, surface that. Otherwise the next phase.
+        if let Some(active) = instant.active {
+            let dur = meta
+                .phases
+                .iter()
+                .find(|p| p.name == active.name)
+                .map(|p| p.duration_minutes)
+                .unwrap_or(0);
+            out.push(UpcomingEvent {
+                id: meta.id.clone(),
+                name: format!("{} — {}", meta.name, active.name),
+                map: meta.map.clone(),
+                kind: UpcomingKind::MetaPhase,
+                start_at: active.started_at,
+                duration_minutes: dur,
+                waypoint_code: meta.waypoint_code.clone(),
+            });
+        } else if instant.next.starts_at <= horizon {
             let next_phase_dur = meta
                 .phases
                 .iter()
@@ -155,7 +210,7 @@ pub fn all_upcoming(schedule: &Schedule, now: DateTime<Utc>, horizon_minutes: i6
                 kind: UpcomingKind::MetaPhase,
                 start_at: instant.next.starts_at,
                 duration_minutes: next_phase_dur,
-                waypoint_code: None,
+                waypoint_code: meta.waypoint_code.clone(),
             });
         }
     }

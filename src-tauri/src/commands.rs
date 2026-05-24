@@ -551,13 +551,22 @@ pub async fn cmd_remove_boss_group(state: State<'_, AppState>, boss_id: String) 
 
 #[tauri::command]
 pub async fn cmd_list_events(state: State<'_, AppState>) -> Result<Vec<EventView>> {
-    use crate::timers::engine::{current_meta_phase, next_spawn};
+    use crate::timers::engine::{current_meta_phase, next_spawn, prev_spawn};
     let now = chrono::Utc::now();
     let pinned_set: std::collections::HashSet<String> =
         state.db.list_pinned_boss_ids()?.into_iter().collect();
 
     let mut out = Vec::new();
     for boss in &state.schedule.world_bosses {
+        // If the boss spawned within its duration window, surface THAT
+        // start time so the UI can render 'active Xm left' instead of
+        // jumping to the next cycle.
+        let start_at = prev_spawn(boss, now)
+            .and_then(|prev| {
+                let end = prev + chrono::Duration::minutes(boss.duration_minutes as i64);
+                if now < end { Some(prev) } else { None }
+            })
+            .unwrap_or_else(|| next_spawn(boss, now));
         out.push(EventView {
             id: boss.id.clone(),
             name: boss.name.clone(),
@@ -565,19 +574,31 @@ pub async fn cmd_list_events(state: State<'_, AppState>) -> Result<Vec<EventView
             kind: EventKind::WorldBoss,
             map: boss.map.clone(),
             waypoint_code: boss.waypoint_code.clone(),
-            next_spawn: next_spawn(boss, now),
+            next_spawn: start_at,
             duration_minutes: boss.duration_minutes,
             pinned: pinned_set.contains(&boss.id),
         });
     }
     for meta in &state.schedule.meta_events {
         let instant = current_meta_phase(meta, now);
-        let next_dur = meta
-            .phases
-            .iter()
-            .find(|p| p.name == instant.next.name)
-            .map(|p| p.duration_minutes)
-            .unwrap_or(0);
+        // Active phase first, fallback to next.
+        let (start_at, duration) = if let Some(active) = &instant.active {
+            let dur = meta
+                .phases
+                .iter()
+                .find(|p| p.name == active.name)
+                .map(|p| p.duration_minutes)
+                .unwrap_or(0);
+            (active.started_at, dur)
+        } else {
+            let dur = meta
+                .phases
+                .iter()
+                .find(|p| p.name == instant.next.name)
+                .map(|p| p.duration_minutes)
+                .unwrap_or(0);
+            (instant.next.starts_at, dur)
+        };
         out.push(EventView {
             id: meta.id.clone(),
             name: meta.name.clone(),
@@ -585,8 +606,8 @@ pub async fn cmd_list_events(state: State<'_, AppState>) -> Result<Vec<EventView
             kind: EventKind::MetaEvent,
             map: meta.map.clone(),
             waypoint_code: meta.waypoint_code.clone(),
-            next_spawn: instant.next.starts_at,
-            duration_minutes: next_dur,
+            next_spawn: start_at,
+            duration_minutes: duration,
             pinned: pinned_set.contains(&meta.id),
         });
     }
@@ -731,33 +752,50 @@ fn lookup_event(
     id: &str,
     now: chrono::DateTime<chrono::Utc>,
 ) -> Option<EventInfo> {
-    use crate::timers::engine::{current_meta_phase, next_spawn};
+    use crate::timers::engine::{current_meta_phase, next_spawn, prev_spawn};
     if let Some(b) = schedule.world_bosses.iter().find(|b| b.id == id) {
+        let start_at = prev_spawn(b, now)
+            .and_then(|prev| {
+                let end = prev + chrono::Duration::minutes(b.duration_minutes as i64);
+                if now < end { Some(prev) } else { None }
+            })
+            .unwrap_or_else(|| next_spawn(b, now));
         return Some(EventInfo {
             id: b.id.clone(),
             name: b.name.clone(),
             map: b.map.clone(),
             expansion: b.expansion.clone(),
-            next_spawn: next_spawn(b, now),
+            next_spawn: start_at,
             duration_minutes: b.duration_minutes,
             waypoint_code: b.waypoint_code.clone(),
         });
     }
     if let Some(m) = schedule.meta_events.iter().find(|m| m.id == id) {
         let instant = current_meta_phase(m, now);
-        let next_dur = m
-            .phases
-            .iter()
-            .find(|p| p.name == instant.next.name)
-            .map(|p| p.duration_minutes)
-            .unwrap_or(0);
+        let (start_at, duration) = if let Some(active) = &instant.active {
+            let dur = m
+                .phases
+                .iter()
+                .find(|p| p.name == active.name)
+                .map(|p| p.duration_minutes)
+                .unwrap_or(0);
+            (active.started_at, dur)
+        } else {
+            let dur = m
+                .phases
+                .iter()
+                .find(|p| p.name == instant.next.name)
+                .map(|p| p.duration_minutes)
+                .unwrap_or(0);
+            (instant.next.starts_at, dur)
+        };
         return Some(EventInfo {
             id: m.id.clone(),
             name: m.name.clone(),
             map: m.map.clone(),
             expansion: m.expansion.clone().unwrap_or_else(|| "Core".into()),
-            next_spawn: instant.next.starts_at,
-            duration_minutes: next_dur,
+            next_spawn: start_at,
+            duration_minutes: duration,
             waypoint_code: m.waypoint_code.clone(),
         });
     }
