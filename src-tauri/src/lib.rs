@@ -19,6 +19,7 @@ use crate::api::client::ApiClient;
 use crate::commands::AppState;
 use crate::db::repository::Db;
 use crate::sync::engine::SyncEngine;
+use crate::timers::schedule::Schedule;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -36,6 +37,9 @@ pub fn run() {
             commands::cmd_check_api_key,
             commands::cmd_clear_api_key,
             commands::cmd_sync_now,
+            commands::cmd_get_upcoming_events,
+            commands::cmd_get_wizardsvault_state,
+            commands::cmd_get_progress_summary,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");
@@ -48,6 +52,16 @@ pub fn run() {
                 e
             })?);
             info!(achievements = db.count_achievements().unwrap_or(-1), "database ready");
+
+            let schedule = Arc::new(Schedule::load().map_err(|e| {
+                error!(error = %e, "failed to load embedded boss schedule");
+                e
+            })?);
+            info!(
+                bosses = schedule.world_bosses.len(),
+                metas = schedule.meta_events.len(),
+                "boss schedule loaded"
+            );
 
             // If a key is already stored, build the client + engine eagerly so
             // sync starts at boot. Otherwise the UI will prompt for one.
@@ -74,7 +88,7 @@ pub fn run() {
                 }
             };
 
-            app.manage(AppState { db, engine: Mutex::new(engine) });
+            app.manage(AppState { db, engine: Mutex::new(engine), schedule });
             Ok(())
         })
         .run(tauri::generate_context!())
