@@ -64,6 +64,34 @@
         { "achievement_id": 3459, "step": 3 }
       ]
     },
+    {
+      "key": "astral_armor",
+      "name": "Astral Armor",
+      "generation": "SotO",
+      "kind": "armor",
+      "sort_order": 71,
+      "members": [
+        { "achievement_id": 7128, "step": 1 },
+        { "achievement_id": 7214, "step": 2 },
+        { "achievement_id": 7098, "step": 3 },
+        { "achievement_id": 7096, "step": 4 },
+        { "achievement_id": 7219, "step": 5 },
+        { "achievement_id": 7240, "step": 6 },
+        { "achievement_id": 7051, "step": 7 }
+      ]
+    },
+    {
+      "key": "obsidian_armor",
+      "name": "Obsidian Armor (Tier 2)",
+      "generation": "SotO",
+      "kind": "armor",
+      "sort_order": 72,
+      "members": [
+        { "achievement_id": 8064, "step": 1 },
+        { "achievement_id": 7802, "step": 2 },
+        { "achievement_id": 8093, "step": 3 }
+      ]
+    },
 
     {
       "key": "bolt",
@@ -356,6 +384,16 @@
         { "achievement_id": 2921, "step": 2 },
         { "achievement_id": 2951, "step": 3 },
         { "achievement_id": 2913, "step": 4 }
+      ]
+    },
+    {
+      "key": "klobjarne_geirr",
+      "name": "Klobjarne Geirr",
+      "generation": "IBS",
+      "kind": "weapon",
+      "sort_order": 250,
+      "members": [
+        { "achievement_id": 8447, "step": 1 }
       ]
     }
   ]

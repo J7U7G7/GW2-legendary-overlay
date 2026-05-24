@@ -77,6 +77,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set({ apiKeyStatus: status, status: "idle" });
       if (status && status.permissions_ok) {
         await get().refresh();
+        // Resolve any item names referenced by previously-pinned achievements.
+        try {
+          const requested = await api.warmItemCache();
+          if (requested > 0) await get().refresh();
+        } catch (e) {
+          console.warn("warmItemCache failed:", e);
+        }
       }
     } catch (e) {
       set({ status: "error", errorMessage: String(e) });

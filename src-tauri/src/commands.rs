@@ -846,15 +846,24 @@ fn load_item_cache_for_pinned(
 /// Fetch any Item-typed bit referenced by pinned achievements that we don't
 /// yet have in the items cache. Called by the frontend after a pin/unpin so
 /// the next get_pinned_view shows real item names instead of `Item #X`.
+///
+/// Returns the number of items that were *requested* (not just the ones the
+/// API actually returned) so the frontend can always know a warm pass
+/// happened and trigger one final refresh.
 #[tauri::command]
 pub async fn cmd_warm_item_cache(state: State<'_, AppState>) -> Result<usize> {
     let missing = crate::sync::items::find_missing_item_ids(&state.db)?;
     if missing.is_empty() {
+        tracing::debug!("warm_item_cache: nothing to fetch");
         return Ok(0);
     }
+    tracing::info!(count = missing.len(), "warm_item_cache: fetching items");
     let key = load_api_key(&state.db)?.ok_or(AppError::NoApiKey)?;
     let client = ApiClient::new(Some(key))?;
-    crate::sync::items::fetch_and_cache_items(&client, &state.db, &missing).await
+    let fetched =
+        crate::sync::items::fetch_and_cache_items(&client, &state.db, &missing).await?;
+    tracing::info!(requested = missing.len(), fetched, "warm_item_cache: done");
+    Ok(missing.len())
 }
 
 /// Parse the cached `achievements.bits` JSON array against the user's
