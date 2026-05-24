@@ -99,6 +99,36 @@ impl Db {
             Ok(out)
         })
     }
+
+    pub fn pin_boss(&self, boss_id: &str) -> Result<()> {
+        self.with_conn(|c| {
+            c.execute(
+                "INSERT OR IGNORE INTO pinned_bosses (boss_id) VALUES (?1)",
+                params![boss_id],
+            )?;
+            Ok(())
+        })
+    }
+
+    pub fn unpin_boss(&self, boss_id: &str) -> Result<()> {
+        self.with_conn(|c| {
+            c.execute("DELETE FROM pinned_bosses WHERE boss_id = ?1", params![boss_id])?;
+            Ok(())
+        })
+    }
+
+    pub fn list_pinned_boss_ids(&self) -> Result<Vec<String>> {
+        self.with_conn(|c| {
+            let mut stmt =
+                c.prepare("SELECT boss_id FROM pinned_bosses ORDER BY pinned_at")?;
+            let mapped = stmt.query_map([], |r| r.get::<_, String>(0))?;
+            let mut out = Vec::new();
+            for row in mapped {
+                out.push(row?);
+            }
+            Ok(out)
+        })
+    }
 }
 
 #[cfg(test)]
@@ -131,6 +161,18 @@ mod tests {
         assert_eq!(pinned, vec![1234, 5678]);
         db.unpin_achievement(1234).unwrap();
         assert_eq!(db.list_pinned_ids().unwrap(), vec![5678]);
+    }
+
+    #[test]
+    fn boss_pin_unpin_round_trip() {
+        let db = Db::open_in_memory().unwrap();
+        assert!(db.list_pinned_boss_ids().unwrap().is_empty());
+        db.pin_boss("tequatl").unwrap();
+        db.pin_boss("shadow_behemoth").unwrap();
+        db.pin_boss("tequatl").unwrap(); // idempotent
+        assert_eq!(db.list_pinned_boss_ids().unwrap(), vec!["tequatl", "shadow_behemoth"]);
+        db.unpin_boss("tequatl").unwrap();
+        assert_eq!(db.list_pinned_boss_ids().unwrap(), vec!["shadow_behemoth"]);
     }
 
     #[test]

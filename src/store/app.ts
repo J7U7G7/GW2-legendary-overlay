@@ -4,15 +4,15 @@ import { api } from "../lib/tauri";
 import type {
   AchievementSearchResult,
   ApiKeyStatus,
+  EventView,
   LegendaryCollection,
-  PinnedItem,
+  PinnedView,
   ProgressSummary,
-  UpcomingEvent,
   WizardsVaultState,
 } from "../types/gw2";
 
 type LoadingState = "idle" | "checking" | "syncing" | "error";
-export type ViewKey = "pinned" | "catalog" | "search" | "wv";
+export type ViewKey = "pinned" | "events" | "catalog" | "search" | "wv";
 
 type AppStore = {
   apiKeyStatus: ApiKeyStatus | null;
@@ -20,12 +20,12 @@ type AppStore = {
   errorMessage: string | null;
   view: ViewKey;
 
-  upcoming: UpcomingEvent[];
   wizardsVault: WizardsVaultState | null;
   summary: ProgressSummary | null;
 
-  pinned: PinnedItem[];
+  pinned: PinnedView | null;
   collections: LegendaryCollection[];
+  events: EventView[];
   searchQuery: string;
   searchResults: AchievementSearchResult[];
 
@@ -40,9 +40,9 @@ type AppStore = {
   runSearch: () => Promise<void>;
   pin: (id: number, collectionKey?: string | null) => Promise<void>;
   unpin: (id: number) => Promise<void>;
+  pinBoss: (bossId: string) => Promise<void>;
+  unpinBoss: (bossId: string) => Promise<void>;
 };
-
-const HORIZON_MINUTES = 240;
 
 export const useAppStore = create<AppStore>((set, get) => ({
   apiKeyStatus: null,
@@ -50,12 +50,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
   errorMessage: null,
   view: "pinned",
 
-  upcoming: [],
   wizardsVault: null,
   summary: null,
 
-  pinned: [],
+  pinned: null,
   collections: [],
+  events: [],
   searchQuery: "",
   searchResults: [],
 
@@ -63,6 +63,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ view });
     if (view === "catalog" && get().collections.length === 0) {
       void api.listLegendaryCollections().then((collections) => set({ collections }));
+    }
+    if (view === "events") {
+      void api.listEvents().then((events) => set({ events }));
     }
   },
 
@@ -94,11 +97,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await api.clearApiKey();
     set({
       apiKeyStatus: null,
-      upcoming: [],
       wizardsVault: null,
       summary: null,
-      pinned: [],
+      pinned: null,
       collections: [],
+      events: [],
       searchResults: [],
       searchQuery: "",
       status: "idle",
@@ -108,16 +111,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   async refresh() {
     try {
-      const [upcoming, wizardsVault, summary, pinned] = await Promise.all([
-        api.getUpcomingEvents(HORIZON_MINUTES),
+      const [wizardsVault, summary, pinned] = await Promise.all([
         api.getWizardsVaultState(),
         api.getProgressSummary(),
         api.getPinnedView(),
       ]);
-      set({ upcoming, wizardsVault, summary, pinned, status: "idle", errorMessage: null });
-      if (get().view === "catalog") {
+      set({ wizardsVault, summary, pinned, status: "idle", errorMessage: null });
+      const view = get().view;
+      if (view === "catalog") {
         const collections = await api.listLegendaryCollections();
         set({ collections });
+      }
+      if (view === "events") {
+        const events = await api.listEvents();
+        set({ events });
       }
     } catch (e) {
       set({ status: "error", errorMessage: String(e) });
@@ -162,5 +169,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await api.unpinAchievement(id);
     await get().refresh();
     if (get().searchQuery.length > 0) await get().runSearch();
+  },
+
+  async pinBoss(bossId) {
+    await api.pinBoss(bossId);
+    await get().refresh();
+  },
+
+  async unpinBoss(bossId) {
+    await api.unpinBoss(bossId);
+    await get().refresh();
   },
 }));

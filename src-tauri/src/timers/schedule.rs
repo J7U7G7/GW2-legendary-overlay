@@ -27,11 +27,19 @@ pub struct WorldBoss {
     pub area: Option<String>,
     #[serde(default)]
     pub waypoint_code: Option<String>,
+    /// "Core" / "HoT" / "PoF" / "EoD" / "SotO" / "JW". Defaults to "Core" since
+    /// every world boss currently in the schedule is Core Tyria.
+    #[serde(default = "default_expansion")]
+    pub expansion: String,
     /// Spawn times as "HH:MM" UTC strings.
     pub schedule_utc: Vec<String>,
     pub duration_minutes: u32,
     #[serde(default)]
     pub wiki_event: Option<String>,
+}
+
+fn default_expansion() -> String {
+    "Core".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

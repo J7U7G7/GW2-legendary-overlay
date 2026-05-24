@@ -96,3 +96,35 @@ export type PinnedItem = {
   next_event: UpcomingEvent | null;
   score: number;
 };
+
+export type PinnedBossGroup = {
+  boss_id: string;
+  boss_name: string;
+  boss_map: string;
+  expansion: string;
+  next_spawn: string; // ISO
+  duration_minutes: number;
+  waypoint_code: string | null;
+  explicitly_pinned: boolean;
+  achievements: PinnedItem[];
+  has_remaining: boolean;
+};
+
+export type PinnedView = {
+  boss_groups: PinnedBossGroup[];
+  standalone: PinnedItem[];
+};
+
+export type EventKind = "world_boss" | "meta_event" | "ley_line";
+
+export type EventView = {
+  id: string;
+  name: string;
+  expansion: string;
+  kind: EventKind;
+  map: string;
+  waypoint_code: string | null;
+  next_spawn: string; // ISO
+  duration_minutes: number;
+  pinned: boolean;
+};

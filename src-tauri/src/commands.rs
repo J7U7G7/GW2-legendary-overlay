@@ -269,7 +269,7 @@ pub struct LegendaryCollectionView {
     pub done_count: usize,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct PinnedItemView {
     pub id: u32,
     pub name: String,
@@ -283,6 +283,47 @@ pub struct PinnedItemView {
     pub associated_boss: Option<String>,
     pub next_event: Option<UpcomingEvent>,
     pub score: f64,
+}
+
+#[derive(Serialize)]
+pub struct PinnedBossGroup {
+    pub boss_id: String,
+    pub boss_name: String,
+    pub boss_map: String,
+    pub expansion: String,
+    pub next_spawn: chrono::DateTime<chrono::Utc>,
+    pub duration_minutes: u32,
+    pub waypoint_code: Option<String>,
+    pub explicitly_pinned: bool,
+    pub achievements: Vec<PinnedItemView>,
+    pub has_remaining: bool,
+}
+
+#[derive(Serialize)]
+pub struct PinnedView {
+    pub boss_groups: Vec<PinnedBossGroup>,
+    pub standalone: Vec<PinnedItemView>,
+}
+
+#[derive(Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum EventKind {
+    WorldBoss,
+    MetaEvent,
+    LeyLine,
+}
+
+#[derive(Serialize)]
+pub struct EventView {
+    pub id: String,
+    pub name: String,
+    pub expansion: String,
+    pub kind: EventKind,
+    pub map: String,
+    pub waypoint_code: Option<String>,
+    pub next_spawn: chrono::DateTime<chrono::Utc>,
+    pub duration_minutes: u32,
+    pub pinned: bool,
 }
 
 #[tauri::command]
@@ -428,12 +469,170 @@ pub async fn cmd_list_legendary_collections(
 }
 
 #[tauri::command]
-pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<Vec<PinnedItemView>> {
+pub async fn cmd_pin_boss(state: State<'_, AppState>, boss_id: String) -> Result<()> {
+    state.db.pin_boss(&boss_id)
+}
+
+#[tauri::command]
+pub async fn cmd_unpin_boss(state: State<'_, AppState>, boss_id: String) -> Result<()> {
+    state.db.unpin_boss(&boss_id)
+}
+
+#[tauri::command]
+pub async fn cmd_list_events(state: State<'_, AppState>) -> Result<Vec<EventView>> {
+    use crate::timers::engine::{current_meta_phase, next_spawn};
     let now = chrono::Utc::now();
-    let upcoming = all_upcoming(&state.schedule, now, 240);
+    let pinned_set: std::collections::HashSet<String> =
+        state.db.list_pinned_boss_ids()?.into_iter().collect();
+
+    let mut out = Vec::new();
+    for boss in &state.schedule.world_bosses {
+        out.push(EventView {
+            id: boss.id.clone(),
+            name: boss.name.clone(),
+            expansion: boss.expansion.clone(),
+            kind: EventKind::WorldBoss,
+            map: boss.map.clone(),
+            waypoint_code: boss.waypoint_code.clone(),
+            next_spawn: next_spawn(boss, now),
+            duration_minutes: boss.duration_minutes,
+            pinned: pinned_set.contains(&boss.id),
+        });
+    }
+    for meta in &state.schedule.meta_events {
+        let instant = current_meta_phase(meta, now);
+        let next_dur = meta
+            .phases
+            .iter()
+            .find(|p| p.name == instant.next.name)
+            .map(|p| p.duration_minutes)
+            .unwrap_or(0);
+        out.push(EventView {
+            id: meta.id.clone(),
+            name: meta.name.clone(),
+            expansion: meta.expansion.clone().unwrap_or_else(|| "Core".to_string()),
+            kind: EventKind::MetaEvent,
+            map: meta.map.clone(),
+            waypoint_code: None,
+            next_spawn: instant.next.starts_at,
+            duration_minutes: next_dur,
+            pinned: pinned_set.contains(&meta.id),
+        });
+    }
+    if let Some(lla) = &state.schedule.ley_line_anomaly {
+        // Ley-Line's "next_spawn" is the same calculation as a world boss with
+        // fixed schedule_utc times.
+        let lla_boss = crate::timers::schedule::WorldBoss {
+            id: lla.id.clone(),
+            name: lla.name.clone(),
+            tier: None,
+            map: lla.rotation_maps.first().cloned().unwrap_or_default(),
+            area: None,
+            waypoint_code: None,
+            expansion: "Core".to_string(),
+            schedule_utc: lla.schedule_utc.clone(),
+            duration_minutes: lla.duration_minutes,
+            wiki_event: None,
+        };
+        out.push(EventView {
+            id: lla.id.clone(),
+            name: lla.name.clone(),
+            expansion: "Special".to_string(),
+            kind: EventKind::LeyLine,
+            map: lla.rotation_maps.join(" / "),
+            waypoint_code: None,
+            next_spawn: next_spawn(&lla_boss, now),
+            duration_minutes: lla.duration_minutes,
+            pinned: pinned_set.contains(&lla.id),
+        });
+    }
+
+    // Sort: by expansion (Core first, then alpha), then by next_spawn ascending.
+    out.sort_by(|a, b| {
+        let exp_order = |e: &str| match e {
+            "Core" => 0,
+            "HoT" => 1,
+            "PoF" => 2,
+            "LWS3" => 3,
+            "LWS4" => 4,
+            "EoD" => 5,
+            "SotO" => 6,
+            "JW" => 7,
+            "Special" => 99,
+            _ => 50,
+        };
+        exp_order(&a.expansion)
+            .cmp(&exp_order(&b.expansion))
+            .then_with(|| a.next_spawn.cmp(&b.next_spawn))
+            .then_with(|| a.name.cmp(&b.name))
+    });
+    Ok(out)
+}
+
+#[tauri::command]
+pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<PinnedView> {
+    use crate::timers::engine::next_spawn;
+    let now = chrono::Utc::now();
+    let upcoming_window = all_upcoming(&state.schedule, now, 240);
     let weights = Weights::default();
 
-    let rows = state.db.with_conn(|c| {
+    let pinned_boss_ids = state.db.list_pinned_boss_ids()?;
+    let achievements = load_pinned_achievement_views(&state.db, &upcoming_window, &weights, now)?;
+
+    // Group achievements by associated_boss
+    use std::collections::HashMap;
+    let mut by_boss: HashMap<String, Vec<PinnedItemView>> = HashMap::new();
+    let mut standalone: Vec<PinnedItemView> = Vec::new();
+    for item in achievements {
+        match item.associated_boss.clone() {
+            Some(b) => by_boss.entry(b).or_default().push(item),
+            None => standalone.push(item),
+        }
+    }
+
+    // Union: boss IDs from explicit pins + boss IDs referenced by pinned achievements
+    let mut all_boss_ids: Vec<String> = pinned_boss_ids.to_vec();
+    for k in by_boss.keys() {
+        if !all_boss_ids.contains(k) {
+            all_boss_ids.push(k.clone());
+        }
+    }
+
+    let mut boss_groups: Vec<PinnedBossGroup> = all_boss_ids
+        .into_iter()
+        .filter_map(|boss_id| {
+            let boss = state.schedule.world_bosses.iter().find(|b| b.id == boss_id)?;
+            let next = next_spawn(boss, now);
+            let achievements = by_boss.remove(&boss_id).unwrap_or_default();
+            let has_remaining = achievements.iter().any(|a| !a.done);
+            Some(PinnedBossGroup {
+                boss_id: boss.id.clone(),
+                boss_name: boss.name.clone(),
+                boss_map: boss.map.clone(),
+                expansion: boss.expansion.clone(),
+                next_spawn: next,
+                duration_minutes: boss.duration_minutes,
+                waypoint_code: boss.waypoint_code.clone(),
+                explicitly_pinned: pinned_boss_ids.contains(&boss_id),
+                achievements,
+                has_remaining,
+            })
+        })
+        .collect();
+
+    boss_groups.sort_by_key(|g| g.next_spawn);
+    standalone.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+
+    Ok(PinnedView { boss_groups, standalone })
+}
+
+fn load_pinned_achievement_views(
+    db: &Db,
+    upcoming: &[UpcomingEvent],
+    weights: &Weights,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<Vec<PinnedItemView>> {
+    let rows = db.with_conn(|c| {
         let mut stmt = c.prepare(
             "SELECT pin.achievement_id, pin.collection_key,
                     a.name, a.description, COALESCE(a.points, 0),
@@ -466,7 +665,7 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<Vec<Pinne
         Ok(out)
     })?;
 
-    let mut scored: Vec<PinnedItemView> = rows
+    let items: Vec<PinnedItemView> = rows
         .into_iter()
         .map(|r| {
             let ratio = match (r.current, r.max) {
@@ -479,7 +678,7 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<Vec<Pinne
                     }
                 }
             };
-            let related: Vec<String> = r.associated_boss.iter().cloned().collect();
+            let related: Vec<String> = r.associated_boss.clone().into_iter().collect();
             let scoreable = Scoreable {
                 id: r.id.to_string(),
                 completion_ratio: ratio,
@@ -487,7 +686,7 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<Vec<Pinne
                 effort_minutes: r.effort_minutes,
                 related_event_ids: related.clone(),
             };
-            let s = score_item(&scoreable, &upcoming, &weights, now);
+            let s = score_item(&scoreable, upcoming, weights, now);
             let next_event = r
                 .associated_boss
                 .as_ref()
@@ -508,9 +707,7 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<Vec<Pinne
             }
         })
         .collect();
-
-    scored.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-    Ok(scored)
+    Ok(items)
 }
 
 struct PinnedRow {

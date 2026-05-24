@@ -8,6 +8,8 @@ const MIGRATIONS: &[&str] = &[
     INITIAL_SCHEMA,
     // v2: pinning + legendary collections
     PIN_SCHEMA,
+    // v3: world boss pinning (separate from achievement pinning)
+    PIN_BOSS_SCHEMA,
 ];
 
 const INITIAL_SCHEMA: &str = r#"
@@ -106,6 +108,13 @@ const PIN_SCHEMA: &str = r#"
     CREATE INDEX idx_pinned_collection ON pinned_achievements(collection_key);
 "#;
 
+const PIN_BOSS_SCHEMA: &str = r#"
+    CREATE TABLE pinned_bosses (
+        boss_id TEXT PRIMARY KEY,
+        pinned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+"#;
+
 pub fn migrate(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS _migrations (
@@ -159,6 +168,7 @@ mod tests {
             "legendary_collection_members",
             "legendary_collections",
             "pinned_achievements",
+            "pinned_bosses",
             "settings",
             "wizardsvault",
         ] {

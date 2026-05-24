@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore, type ViewKey } from "../store/app";
 import { ApiKeySetup } from "./ApiKeySetup";
 import { CatalogView } from "./CatalogView";
+import { EventsTab } from "./EventsTab";
 import { PinnedPanel } from "./PinnedPanel";
 import { SearchView } from "./SearchView";
 import { WizardsVaultPanel } from "./WizardsVaultPanel";
@@ -11,6 +12,7 @@ import { WizardsVaultPanel } from "./WizardsVaultPanel";
 type TabConfig = { id: ViewKey; label: string };
 const TABS: TabConfig[] = [
   { id: "pinned", label: "Pinned" },
+  { id: "events", label: "Events" },
   { id: "catalog", label: "Catalog" },
   { id: "search", label: "Search" },
   { id: "wv", label: "WV" },
@@ -27,6 +29,8 @@ export function Overlay() {
   const triggerSync = useAppStore((s) => s.triggerSync);
   const clearApiKey = useAppStore((s) => s.clearApiKey);
   const setView = useAppStore((s) => s.setView);
+  const pinnedCount =
+    (pinned?.boss_groups.length ?? 0) + (pinned?.standalone.length ?? 0);
 
   useEffect(() => {
     void checkApiKey();
@@ -51,9 +55,10 @@ export function Overlay() {
         <ApiKeySetup />
       ) : (
         <>
-          <Tabs current={view} onSelect={setView} pinnedCount={pinned.length} />
+          <Tabs current={view} onSelect={setView} pinnedCount={pinnedCount} />
           <div className="flex-1 flex flex-col overflow-hidden">
             {view === "pinned" && <PinnedPanel />}
+            {view === "events" && <EventsTab />}
             {view === "catalog" && <CatalogView />}
             {view === "search" && <SearchView />}
             {view === "wv" && (

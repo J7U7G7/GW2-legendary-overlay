@@ -3,8 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   AchievementSearchResult,
   ApiKeyStatus,
+  EventView,
   LegendaryCollection,
-  PinnedItem,
+  PinnedView,
   ProgressSummary,
   SyncReport,
   UpcomingEvent,
@@ -28,5 +29,8 @@ export const api = {
     invoke<void>("cmd_unpin_achievement", { achievementId }),
   listLegendaryCollections: () =>
     invoke<LegendaryCollection[]>("cmd_list_legendary_collections"),
-  getPinnedView: () => invoke<PinnedItem[]>("cmd_get_pinned_view"),
+  getPinnedView: () => invoke<PinnedView>("cmd_get_pinned_view"),
+  pinBoss: (bossId: string) => invoke<void>("cmd_pin_boss", { bossId }),
+  unpinBoss: (bossId: string) => invoke<void>("cmd_unpin_boss", { bossId }),
+  listEvents: () => invoke<EventView[]>("cmd_list_events"),
 };

@@ -46,6 +46,9 @@ pub fn run() {
             commands::cmd_unpin_achievement,
             commands::cmd_list_legendary_collections,
             commands::cmd_get_pinned_view,
+            commands::cmd_pin_boss,
+            commands::cmd_unpin_boss,
+            commands::cmd_list_events,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

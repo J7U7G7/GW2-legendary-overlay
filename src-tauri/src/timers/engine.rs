@@ -193,6 +193,7 @@ mod tests {
             map: "Test Map".into(),
             area: None,
             waypoint_code: Some("[&AAAAAAAA=]".into()),
+            expansion: "Core".into(),
             schedule_utc: times.iter().map(|s| (*s).to_string()).collect(),
             duration_minutes: 15,
             wiki_event: None,
