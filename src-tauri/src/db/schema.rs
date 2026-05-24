@@ -12,6 +12,8 @@ const MIGRATIONS: &[&str] = &[
     PIN_BOSS_SCHEMA,
     // v4: items cache (resolves Item-typed bits to human-readable names)
     ITEMS_CACHE_SCHEMA,
+    // v5: account-wide item inventory (bank, materials, characters, shared)
+    ACCOUNT_ITEMS_SCHEMA,
 ];
 
 const INITIAL_SCHEMA: &str = r#"
@@ -129,6 +131,19 @@ const ITEMS_CACHE_SCHEMA: &str = r#"
     );
 "#;
 
+const ACCOUNT_ITEMS_SCHEMA: &str = r#"
+    CREATE TABLE account_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        location TEXT NOT NULL,
+        location_detail TEXT,
+        count INTEGER NOT NULL,
+        last_synced TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX idx_account_items_item ON account_items(item_id);
+    CREATE INDEX idx_account_items_location ON account_items(location);
+"#;
+
 pub fn migrate(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS _migrations (
@@ -175,6 +190,7 @@ mod tests {
         let t = tables(&conn);
         for expected in [
             "_migrations",
+            "account_items",
             "account_progress",
             "achievement_metadata",
             "achievements",

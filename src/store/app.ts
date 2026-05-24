@@ -79,7 +79,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set({ apiKeyStatus: status, status: "idle" });
       if (status && status.permissions_ok) {
         await get().refresh();
-        // Resolve any item names referenced by previously-pinned achievements.
         try {
           const requested = await api.warmItemCache();
           if (requested > 0) await get().refresh();
@@ -88,6 +87,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
         }
       }
     } catch (e) {
+      // Crucially: do NOT clobber apiKeyStatus here. A transient backend
+      // error (DPAPI/network/tokeninfo blip) must not kick the user to
+      // the ApiKeySetup screen. Only an explicit `null` from
+      // cmd_check_api_key means "no key configured". On first launch
+      // apiKeyStatus is null anyway, so the worst case is the user has
+      // to wait for the next refresh — better than a wrong setup prompt.
+      console.error("checkApiKey failed:", e);
       set({ status: "error", errorMessage: String(e) });
     }
   },

@@ -124,12 +124,16 @@ pub async fn cmd_check_api_key(state: State<'_, AppState>) -> Result<Option<ApiK
             tracing::debug!(account = %account_id, "check_api_key: validated");
             Ok(Some(ApiKeyStatus::from(account_id, info)))
         }
-        Err(AppError::Unauthorized) => {
-            tracing::warn!("check_api_key: key is unauthorized (401/403)");
-            Err(AppError::Unauthorized)
-        }
         Err(e) => {
-            tracing::warn!(error = %e, "check_api_key: validation skipped, returning cached status");
+            // Includes Unauthorized — ArenaNet's API throws transient 401s
+            // during their frequent backend outages, and we don't want a
+            // single bad response to kick the user back to the setup
+            // screen. The periodic sync engine surfaces real auth failures
+            // on its 5-min progress tick instead.
+            tracing::warn!(
+                error = %e,
+                "check_api_key: validation failed, returning cached status",
+            );
             Ok(Some(ApiKeyStatus {
                 account_id,
                 permissions: Vec::new(),
