@@ -42,12 +42,12 @@ pub async fn sync_account_items(client: &ApiClient, db: &Db) -> Result<usize> {
 
             for m in &materials {
                 if m.count > 0 {
-                    stmt.execute(params![
-                        m.id,
-                        "materials",
-                        m.category.map(|c| format!("category {c}")),
-                        m.count,
-                    ])?;
+                    let detail = m
+                        .category
+                        .and_then(material_category_name)
+                        .map(|s| s.to_string())
+                        .or_else(|| m.category.map(|c| format!("category {c}")));
+                    stmt.execute(params![m.id, "materials", detail, m.count])?;
                     inserted += 1;
                 }
             }
@@ -84,6 +84,7 @@ fn insert_character_items(
 ) -> rusqlite::Result<usize> {
     let location = format!("character:{}", ch.name);
     let mut inserted = 0usize;
+    // Bags
     for (bag_idx, bag_opt) in ch.bags.iter().enumerate() {
         let Some(bag) = bag_opt else { continue };
         for (slot_idx, slot_opt) in bag.inventory.iter().enumerate() {
@@ -96,7 +97,31 @@ fn insert_character_items(
             inserted += 1;
         }
     }
+    // Equipped items (a 'bouclier élevé' lives here, not in bags).
+    for eq in &ch.equipment {
+        let detail = format!("equipped: {}", eq.slot);
+        stmt.execute(params![eq.id, &location, detail, 1u32])?;
+        inserted += 1;
+    }
     Ok(inserted)
+}
+
+/// Human-readable French names for the GW2 material storage categories.
+/// Pulled from `/v2/materials?ids=all&lang=fr`; categories are stable enough
+/// to hardcode rather than fetch every sync.
+fn material_category_name(id: u32) -> Option<&'static str> {
+    match id {
+        5 => Some("Matériaux de cuisine"),
+        6 => Some("Matériaux d'artisanat basiques"),
+        29 => Some("Matériaux d'artisanat intermédiaires"),
+        30 => Some("Pierres précieuses et joyaux"),
+        37 => Some("Matériaux d'artisanat avancés"),
+        38 => Some("Matériaux de festival"),
+        46 => Some("Matériaux élevés"),
+        49 => Some("Ingrédients culinaires"),
+        50 => Some("Matériaux d'illustration"),
+        _ => None,
+    }
 }
 
 #[allow(dead_code)]

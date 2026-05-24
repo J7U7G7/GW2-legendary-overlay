@@ -235,32 +235,14 @@ pub async fn cmd_sync_account_items(state: State<'_, AppState>) -> Result<usize>
     let key = load_api_key(&state.db)?.ok_or(AppError::NoApiKey)?;
     let client = ApiClient::new(Some(key))?;
     let n = crate::sync::inventory::sync_account_items(&client, &state.db).await?;
-    // Warm the items_cache so names resolve for everything we just inserted.
+
+    // Warm items_cache for every id we just inserted. We re-fetch in batches
+    // even for ids already present so names migrate from any prior English
+    // sync to the current French one. /v2/items batch is fast (200 ids per
+    // call) and only runs on user-initiated sync.
     let ids = crate::sync::inventory::distinct_item_ids(&state.db)?;
     if !ids.is_empty() {
-        // Skip ids we already have to avoid hammering the items endpoint.
-        let cached: std::collections::HashSet<u32> = state.db.with_conn(|c| {
-            let placeholders =
-                std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
-            let sql = format!("SELECT id FROM items_cache WHERE id IN ({placeholders})");
-            let params: Vec<rusqlite::types::Value> = ids
-                .iter()
-                .map(|id| rusqlite::types::Value::Integer(*id as i64))
-                .collect();
-            let mut stmt = c.prepare(&sql)?;
-            let rows = stmt
-                .query_map(rusqlite::params_from_iter(params.iter()), |r| {
-                    Ok(r.get::<_, i64>(0)? as u32)
-                })?
-                .filter_map(|r| r.ok())
-                .collect();
-            Ok(rows)
-        })?;
-        let missing: Vec<u32> =
-            ids.into_iter().filter(|i| !cached.contains(i)).collect();
-        if !missing.is_empty() {
-            let _ = crate::sync::items::fetch_and_cache_items(&client, &state.db, &missing).await;
-        }
+        let _ = crate::sync::items::fetch_and_cache_items(&client, &state.db, &ids).await;
     }
     Ok(n)
 }

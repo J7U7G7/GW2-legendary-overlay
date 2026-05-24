@@ -175,7 +175,10 @@ pub async fn get_items_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<ItemDetai
         return Ok(vec![]);
     }
     let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
-    c.get_json(&format!("/v2/items?ids={ids_csv}")).await
+    // lang=fr because the user plays the French client and expects to search
+    // 'bouclier' / 'élevé' / etc. To make this configurable, plumb a setting
+    // through and parameterise here.
+    c.get_json(&format!("/v2/items?ids={ids_csv}&lang=fr")).await
 }
 
 #[derive(Debug, Deserialize)]
@@ -199,10 +202,18 @@ pub struct CharacterBag {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct EquipmentSlot {
+    pub id: u32,
+    pub slot: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Character {
     pub name: String,
     #[serde(default)]
     pub bags: Vec<Option<CharacterBag>>,
+    #[serde(default)]
+    pub equipment: Vec<EquipmentSlot>,
 }
 
 #[allow(dead_code)]
