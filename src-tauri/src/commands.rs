@@ -478,6 +478,14 @@ pub async fn cmd_unpin_boss(state: State<'_, AppState>, boss_id: String) -> Resu
     state.db.unpin_boss(&boss_id)
 }
 
+/// Wipe a boss group entirely: the explicit boss pin (if any) plus every
+/// pinned achievement linked to that boss via achievement_metadata. Called
+/// when the user dismisses a boss card from the Pinned tab.
+#[tauri::command]
+pub async fn cmd_remove_boss_group(state: State<'_, AppState>, boss_id: String) -> Result<()> {
+    state.db.remove_boss_group(&boss_id)
+}
+
 #[tauri::command]
 pub async fn cmd_list_events(state: State<'_, AppState>) -> Result<Vec<EventView>> {
     use crate::timers::engine::{current_meta_phase, next_spawn};
@@ -571,7 +579,6 @@ pub async fn cmd_list_events(state: State<'_, AppState>) -> Result<Vec<EventView
 
 #[tauri::command]
 pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<PinnedView> {
-    use crate::timers::engine::next_spawn;
     let now = chrono::Utc::now();
     let upcoming_window = all_upcoming(&state.schedule, now, 240);
     let weights = Weights::default();
@@ -590,30 +597,29 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<PinnedVie
         }
     }
 
-    // Union: boss IDs from explicit pins + boss IDs referenced by pinned achievements
-    let mut all_boss_ids: Vec<String> = pinned_boss_ids.to_vec();
+    // Union: event IDs from explicit pins + IDs referenced by pinned achievements
+    let mut all_event_ids: Vec<String> = pinned_boss_ids.to_vec();
     for k in by_boss.keys() {
-        if !all_boss_ids.contains(k) {
-            all_boss_ids.push(k.clone());
+        if !all_event_ids.contains(k) {
+            all_event_ids.push(k.clone());
         }
     }
 
-    let mut boss_groups: Vec<PinnedBossGroup> = all_boss_ids
+    let mut boss_groups: Vec<PinnedBossGroup> = all_event_ids
         .into_iter()
-        .filter_map(|boss_id| {
-            let boss = state.schedule.world_bosses.iter().find(|b| b.id == boss_id)?;
-            let next = next_spawn(boss, now);
-            let achievements = by_boss.remove(&boss_id).unwrap_or_default();
+        .filter_map(|event_id| {
+            let info = lookup_event(&state.schedule, &event_id, now)?;
+            let achievements = by_boss.remove(&event_id).unwrap_or_default();
             let has_remaining = achievements.iter().any(|a| !a.done);
             Some(PinnedBossGroup {
-                boss_id: boss.id.clone(),
-                boss_name: boss.name.clone(),
-                boss_map: boss.map.clone(),
-                expansion: boss.expansion.clone(),
-                next_spawn: next,
-                duration_minutes: boss.duration_minutes,
-                waypoint_code: boss.waypoint_code.clone(),
-                explicitly_pinned: pinned_boss_ids.contains(&boss_id),
+                boss_id: info.id,
+                boss_name: info.name,
+                boss_map: info.map,
+                expansion: info.expansion,
+                next_spawn: info.next_spawn,
+                duration_minutes: info.duration_minutes,
+                waypoint_code: info.waypoint_code,
+                explicitly_pinned: pinned_boss_ids.contains(&event_id),
                 achievements,
                 has_remaining,
             })
@@ -624,6 +630,79 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<PinnedVie
     standalone.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
 
     Ok(PinnedView { boss_groups, standalone })
+}
+
+struct EventInfo {
+    id: String,
+    name: String,
+    map: String,
+    expansion: String,
+    next_spawn: chrono::DateTime<chrono::Utc>,
+    duration_minutes: u32,
+    waypoint_code: Option<String>,
+}
+
+fn lookup_event(
+    schedule: &Schedule,
+    id: &str,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Option<EventInfo> {
+    use crate::timers::engine::{current_meta_phase, next_spawn};
+    if let Some(b) = schedule.world_bosses.iter().find(|b| b.id == id) {
+        return Some(EventInfo {
+            id: b.id.clone(),
+            name: b.name.clone(),
+            map: b.map.clone(),
+            expansion: b.expansion.clone(),
+            next_spawn: next_spawn(b, now),
+            duration_minutes: b.duration_minutes,
+            waypoint_code: b.waypoint_code.clone(),
+        });
+    }
+    if let Some(m) = schedule.meta_events.iter().find(|m| m.id == id) {
+        let instant = current_meta_phase(m, now);
+        let next_dur = m
+            .phases
+            .iter()
+            .find(|p| p.name == instant.next.name)
+            .map(|p| p.duration_minutes)
+            .unwrap_or(0);
+        return Some(EventInfo {
+            id: m.id.clone(),
+            name: m.name.clone(),
+            map: m.map.clone(),
+            expansion: m.expansion.clone().unwrap_or_else(|| "Core".into()),
+            next_spawn: instant.next.starts_at,
+            duration_minutes: next_dur,
+            waypoint_code: None,
+        });
+    }
+    if let Some(lla) = &schedule.ley_line_anomaly {
+        if lla.id == id {
+            let pseudo = crate::timers::schedule::WorldBoss {
+                id: lla.id.clone(),
+                name: lla.name.clone(),
+                tier: None,
+                map: lla.rotation_maps.first().cloned().unwrap_or_default(),
+                area: None,
+                waypoint_code: None,
+                expansion: "Core".into(),
+                schedule_utc: lla.schedule_utc.clone(),
+                duration_minutes: lla.duration_minutes,
+                wiki_event: None,
+            };
+            return Some(EventInfo {
+                id: lla.id.clone(),
+                name: lla.name.clone(),
+                map: lla.rotation_maps.join(" / "),
+                expansion: "Special".into(),
+                next_spawn: next_spawn(&pseudo, now),
+                duration_minutes: lla.duration_minutes,
+                waypoint_code: None,
+            });
+        }
+    }
+    None
 }
 
 fn load_pinned_achievement_views(

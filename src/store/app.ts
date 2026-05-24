@@ -42,6 +42,7 @@ type AppStore = {
   unpin: (id: number) => Promise<void>;
   pinBoss: (bossId: string) => Promise<void>;
   unpinBoss: (bossId: string) => Promise<void>;
+  removeBossGroup: (bossId: string) => Promise<void>;
 };
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -117,14 +118,22 @@ export const useAppStore = create<AppStore>((set, get) => ({
         api.getPinnedView(),
       ]);
       set({ wizardsVault, summary, pinned, status: "idle", errorMessage: null });
-      const view = get().view;
-      if (view === "catalog") {
+      // Always re-fetch any view that was already loaded once. We don't
+      // gate on the *current* view because pin/unpin actions can flow from
+      // any tab and need to keep the others coherent.
+      const hadCollections = get().collections.length > 0;
+      const hadEvents = get().events.length > 0;
+      const hasSearch = get().searchQuery.trim().length > 0;
+      if (hadCollections) {
         const collections = await api.listLegendaryCollections();
         set({ collections });
       }
-      if (view === "events") {
+      if (hadEvents) {
         const events = await api.listEvents();
         set({ events });
+      }
+      if (hasSearch) {
+        await get().runSearch();
       }
     } catch (e) {
       set({ status: "error", errorMessage: String(e) });
@@ -178,6 +187,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   async unpinBoss(bossId) {
     await api.unpinBoss(bossId);
+    await get().refresh();
+  },
+
+  async removeBossGroup(bossId) {
+    await api.removeBossGroup(bossId);
     await get().refresh();
   },
 }));

@@ -48,6 +48,7 @@ pub fn run() {
             commands::cmd_get_pinned_view,
             commands::cmd_pin_boss,
             commands::cmd_unpin_boss,
+            commands::cmd_remove_boss_group,
             commands::cmd_list_events,
         ])
         .setup(|app| {

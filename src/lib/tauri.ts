@@ -32,5 +32,6 @@ export const api = {
   getPinnedView: () => invoke<PinnedView>("cmd_get_pinned_view"),
   pinBoss: (bossId: string) => invoke<void>("cmd_pin_boss", { bossId }),
   unpinBoss: (bossId: string) => invoke<void>("cmd_unpin_boss", { bossId }),
+  removeBossGroup: (bossId: string) => invoke<void>("cmd_remove_boss_group", { bossId }),
   listEvents: () => invoke<EventView[]>("cmd_list_events"),
 };

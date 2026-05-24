@@ -129,6 +129,24 @@ impl Db {
             Ok(out)
         })
     }
+
+    /// Remove both the explicit boss pin and every pinned achievement that is
+    /// associated with that boss via `achievement_metadata`. Used when the user
+    /// dismisses a boss group from the Pinned tab.
+    pub fn remove_boss_group(&self, boss_id: &str) -> Result<()> {
+        self.with_conn(|c| {
+            c.execute("DELETE FROM pinned_bosses WHERE boss_id = ?1", params![boss_id])?;
+            c.execute(
+                "DELETE FROM pinned_achievements
+                 WHERE achievement_id IN (
+                    SELECT achievement_id FROM achievement_metadata
+                    WHERE associated_boss = ?1
+                 )",
+                params![boss_id],
+            )?;
+            Ok(())
+        })
+    }
 }
 
 #[cfg(test)]
@@ -161,6 +179,30 @@ mod tests {
         assert_eq!(pinned, vec![1234, 5678]);
         db.unpin_achievement(1234).unwrap();
         assert_eq!(db.list_pinned_ids().unwrap(), vec![5678]);
+    }
+
+    #[test]
+    fn remove_boss_group_cascades() {
+        let db = Db::open_in_memory().unwrap();
+        db.with_conn(|c| {
+            c.execute(
+                "INSERT INTO achievement_metadata (achievement_id, associated_boss)
+                 VALUES (900, 'tequatl'), (901, 'tequatl'), (1, 'shadow_behemoth')",
+                [],
+            )?;
+            Ok(())
+        })
+        .unwrap();
+        db.pin_boss("tequatl").unwrap();
+        db.pin_achievement(900, None).unwrap();
+        db.pin_achievement(901, None).unwrap();
+        db.pin_achievement(1, None).unwrap();
+
+        db.remove_boss_group("tequatl").unwrap();
+
+        assert!(db.list_pinned_boss_ids().unwrap().is_empty());
+        // Only the unrelated shadow_behemoth achievement should survive.
+        assert_eq!(db.list_pinned_ids().unwrap(), vec![1]);
     }
 
     #[test]

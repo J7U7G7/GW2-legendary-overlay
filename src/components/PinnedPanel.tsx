@@ -102,7 +102,13 @@ function AchievementRow({ item }: { item: PinnedItem }) {
 function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) {
   // Default open when there are remaining achievements; closed otherwise.
   const [open, setOpen] = useState(group.has_remaining);
-  const unpinBoss = useAppStore((s) => s.unpinBoss);
+  const removeBossGroup = useAppStore((s) => s.removeBossGroup);
+  const removeTitle =
+    group.explicitly_pinned && group.achievements.length > 0
+      ? `Unpin ${group.boss_name} and ${group.achievements.length} linked achievement(s)`
+      : group.explicitly_pinned
+        ? `Unpin ${group.boss_name}`
+        : `Unpin ${group.achievements.length} linked achievement(s)`;
 
   const mins = Math.max(0, Math.floor((new Date(group.next_spawn).getTime() - now) / 60000));
   const isImminent = mins <= 10;
@@ -152,16 +158,14 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
               {open ? "▾" : "▸"}
             </button>
           )}
-          {group.explicitly_pinned && (
-            <button
-              type="button"
-              onClick={() => void unpinBoss(group.boss_id)}
-              className="opacity-40 hover:opacity-100 text-xs"
-              title="Unpin boss"
-            >
-              ✕
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => void removeBossGroup(group.boss_id)}
+            className="opacity-40 hover:opacity-100 text-xs"
+            title={removeTitle}
+          >
+            ✕
+          </button>
         </div>
       </header>
       {open && hasAchievements && (

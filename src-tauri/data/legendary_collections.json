@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "description": "Curated catalog of GW2 legendary collections. Achievement IDs verified against the live GW2 API (Legendary Trinkets / Weapons / Backpacks / Armor categories). Extend by adding entries here — the loader upserts on every boot.",
+    "description": "Curated catalog of GW2 legendary collections. Achievement IDs verified against the live GW2 API (categories 114 Legendary Weapons, 118 Legendary Backpacks, 125 Legendary Armor, 173 Legendary Trinkets). Extend by adding entries here — the loader upserts on every boot. Each member's `step` field reflects the in-game collection order (I, II, III, IV).",
     "last_verified": "2026-05-24",
-    "format_version": "1.0"
+    "format_version": "1.1"
   },
   "collections": [
     {
@@ -37,6 +37,325 @@
         { "achievement_id": 4035, "step": 1 },
         { "achievement_id": 4412, "step": 2 },
         { "achievement_id": 4805, "step": 3 }
+      ]
+    },
+    {
+      "key": "ad_infinitum",
+      "name": "Ad Infinitum",
+      "generation": "Core",
+      "kind": "backpack",
+      "sort_order": 50,
+      "members": [
+        { "achievement_id": 2351, "step": 1 },
+        { "achievement_id": 2557, "step": 2 },
+        { "achievement_id": 2368, "step": 3 },
+        { "achievement_id": 2295, "step": 4 }
+      ]
+    },
+    {
+      "key": "envoy_armor",
+      "name": "Envoy Armor (Raid)",
+      "generation": "HoT",
+      "kind": "armor",
+      "sort_order": 70,
+      "members": [
+        { "achievement_id": 2646, "step": 1 },
+        { "achievement_id": 3012, "step": 2 },
+        { "achievement_id": 3459, "step": 3 }
+      ]
+    },
+
+    {
+      "key": "bolt",
+      "name": "Bolt",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 100,
+      "members": [
+        { "achievement_id": 2355, "step": 1 },
+        { "achievement_id": 2356, "step": 2 },
+        { "achievement_id": 2480, "step": 3 }
+      ]
+    },
+    {
+      "key": "the_bifrost",
+      "name": "The Bifrost",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 101,
+      "members": [
+        { "achievement_id": 2530, "step": 1 },
+        { "achievement_id": 2500, "step": 2 },
+        { "achievement_id": 2187, "step": 3 }
+      ]
+    },
+    {
+      "key": "the_dreamer",
+      "name": "The Dreamer",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 102,
+      "members": [
+        { "achievement_id": 2481, "step": 1 },
+        { "achievement_id": 2610, "step": 2 },
+        { "achievement_id": 2428, "step": 3 }
+      ]
+    },
+    {
+      "key": "the_flameseeker_prophecies",
+      "name": "The Flameseeker Prophecies",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 103,
+      "members": [
+        { "achievement_id": 2479, "step": 1 },
+        { "achievement_id": 2390, "step": 2 },
+        { "achievement_id": 2536, "step": 3 }
+      ]
+    },
+    {
+      "key": "frenzy",
+      "name": "Frenzy",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 104,
+      "members": [
+        { "achievement_id": 2637, "step": 1 },
+        { "achievement_id": 2232, "step": 2 },
+        { "achievement_id": 2409, "step": 3 }
+      ]
+    },
+    {
+      "key": "frostfang",
+      "name": "Frostfang",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 105,
+      "members": [
+        { "achievement_id": 2478, "step": 1 },
+        { "achievement_id": 2606, "step": 2 },
+        { "achievement_id": 2393, "step": 3 }
+      ]
+    },
+    {
+      "key": "howler",
+      "name": "Howler",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 106,
+      "members": [
+        { "achievement_id": 2270, "step": 1 },
+        { "achievement_id": 2588, "step": 2 },
+        { "achievement_id": 2260, "step": 3 }
+      ]
+    },
+    {
+      "key": "incinerator",
+      "name": "Incinerator",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 107,
+      "members": [
+        { "achievement_id": 2564, "step": 1 },
+        { "achievement_id": 2458, "step": 2 },
+        { "achievement_id": 2502, "step": 3 }
+      ]
+    },
+    {
+      "key": "the_juggernaut",
+      "name": "The Juggernaut",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 108,
+      "members": [
+        { "achievement_id": 2438, "step": 1 },
+        { "achievement_id": 2241, "step": 2 },
+        { "achievement_id": 2468, "step": 3 }
+      ]
+    },
+    {
+      "key": "kamohoalii_kotaki",
+      "name": "Kamohoali'i Kotaki",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 109,
+      "members": [
+        { "achievement_id": 2642, "step": 1 },
+        { "achievement_id": 2306, "step": 2 },
+        { "achievement_id": 2535, "step": 3 }
+      ]
+    },
+    {
+      "key": "kraitkin",
+      "name": "Kraitkin",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 110,
+      "members": [
+        { "achievement_id": 2483, "step": 1 },
+        { "achievement_id": 2522, "step": 2 },
+        { "achievement_id": 2296, "step": 3 }
+      ]
+    },
+    {
+      "key": "kudzu",
+      "name": "Kudzu",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 111,
+      "members": [
+        { "achievement_id": 2193, "step": 1 },
+        { "achievement_id": 2311, "step": 2 },
+        { "achievement_id": 2383, "step": 3 }
+      ]
+    },
+    {
+      "key": "meteorlogicus",
+      "name": "Meteorlogicus",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 112,
+      "members": [
+        { "achievement_id": 2441, "step": 1 },
+        { "achievement_id": 2391, "step": 2 },
+        { "achievement_id": 2449, "step": 3 }
+      ]
+    },
+    {
+      "key": "the_minstrel",
+      "name": "The Minstrel",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 113,
+      "members": [
+        { "achievement_id": 2313, "step": 1 },
+        { "achievement_id": 2213, "step": 2 },
+        { "achievement_id": 2242, "step": 3 }
+      ]
+    },
+    {
+      "key": "the_moot",
+      "name": "The Moot",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 114,
+      "members": [
+        { "achievement_id": 2177, "step": 1 },
+        { "achievement_id": 2291, "step": 2 },
+        { "achievement_id": 2374, "step": 3 }
+      ]
+    },
+    {
+      "key": "the_predator",
+      "name": "The Predator",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 115,
+      "members": [
+        { "achievement_id": 2534, "step": 1 },
+        { "achievement_id": 2503, "step": 2 },
+        { "achievement_id": 2280, "step": 3 }
+      ]
+    },
+    {
+      "key": "quip",
+      "name": "Quip",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 116,
+      "members": [
+        { "achievement_id": 2389, "step": 1 },
+        { "achievement_id": 2498, "step": 2 },
+        { "achievement_id": 2524, "step": 3 }
+      ]
+    },
+    {
+      "key": "rodgort",
+      "name": "Rodgort",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 117,
+      "members": [
+        { "achievement_id": 2180, "step": 1 },
+        { "achievement_id": 2596, "step": 2 },
+        { "achievement_id": 2388, "step": 3 }
+      ]
+    },
+    {
+      "key": "sunrise",
+      "name": "Sunrise",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 118,
+      "members": [
+        { "achievement_id": 2253, "step": 1 },
+        { "achievement_id": 2278, "step": 2 },
+        { "achievement_id": 2630, "step": 3 }
+      ]
+    },
+    {
+      "key": "twilight",
+      "name": "Twilight",
+      "generation": "Core",
+      "kind": "weapon",
+      "sort_order": 119,
+      "members": [
+        { "achievement_id": 2420, "step": 1 },
+        { "achievement_id": 2184, "step": 2 },
+        { "achievement_id": 2183, "step": 3 }
+      ]
+    },
+
+    {
+      "key": "astralaria",
+      "name": "Astralaria",
+      "generation": "HoT",
+      "kind": "weapon",
+      "sort_order": 200,
+      "members": [
+        { "achievement_id": 2571, "step": 1 },
+        { "achievement_id": 2447, "step": 2 },
+        { "achievement_id": 2433, "step": 3 },
+        { "achievement_id": 2268, "step": 4 }
+      ]
+    },
+    {
+      "key": "hope",
+      "name": "HOPE",
+      "generation": "HoT",
+      "kind": "weapon",
+      "sort_order": 201,
+      "members": [
+        { "achievement_id": 2450, "step": 1 },
+        { "achievement_id": 2354, "step": 2 },
+        { "achievement_id": 2556, "step": 3 },
+        { "achievement_id": 2250, "step": 4 }
+      ]
+    },
+    {
+      "key": "nevermore",
+      "name": "Nevermore",
+      "generation": "HoT",
+      "kind": "weapon",
+      "sort_order": 202,
+      "members": [
+        { "achievement_id": 2528, "step": 1 },
+        { "achievement_id": 2288, "step": 2 },
+        { "achievement_id": 2336, "step": 3 },
+        { "achievement_id": 2550, "step": 4 }
+      ]
+    },
+    {
+      "key": "chuka_and_champawat",
+      "name": "Chuka and Champawat",
+      "generation": "HoT",
+      "kind": "weapon",
+      "sort_order": 203,
+      "members": [
+        { "achievement_id": 2920, "step": 1 },
+        { "achievement_id": 2921, "step": 2 },
+        { "achievement_id": 2951, "step": 3 },
+        { "achievement_id": 2913, "step": 4 }
       ]
     }
   ]

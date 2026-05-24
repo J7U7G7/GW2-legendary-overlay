@@ -142,7 +142,7 @@ mod tests {
                 Ok(c.query_row("SELECT COUNT(*) FROM legendary_collections", [], |r| r.get(0))?)
             })
             .unwrap();
-        assert!(count >= 3, "expected at least 3 curated collections, got {count}");
+        assert!(count >= 20, "expected at least 20 curated collections, got {count}");
     }
 
     #[test]
@@ -165,12 +165,17 @@ mod tests {
     fn catalogs_are_idempotent() {
         let db = Db::open_in_memory().unwrap();
         load_all(&db).unwrap();
-        load_all(&db).unwrap();
-        let col_count: i64 = db
+        let first: i64 = db
             .with_conn(|c| {
                 Ok(c.query_row("SELECT COUNT(*) FROM legendary_collections", [], |r| r.get(0))?)
             })
             .unwrap();
-        assert_eq!(col_count, 3);
+        load_all(&db).unwrap();
+        let second: i64 = db
+            .with_conn(|c| {
+                Ok(c.query_row("SELECT COUNT(*) FROM legendary_collections", [], |r| r.get(0))?)
+            })
+            .unwrap();
+        assert_eq!(first, second);
     }
 }
