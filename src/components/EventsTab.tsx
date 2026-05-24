@@ -13,13 +13,14 @@ function formatCountdown(targetIso: string, now: number): string {
   return `${m}m`;
 }
 
-function WaypointButton({ code }: { code: string | null }) {
+function WaypointButton({ code, name }: { code: string | null; name?: string }) {
   const [copied, setCopied] = useState(false);
   if (!code) return null;
+  const text = name ? `${name} ${code}` : code;
   const onClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -31,7 +32,7 @@ function WaypointButton({ code }: { code: string | null }) {
       type="button"
       onClick={onClick}
       className="px-1 py-0.5 text-[10px] rounded bg-white/10 hover:bg-white/20 font-mono"
-      title="Copy waypoint code"
+      title={`Copy '${text}'`}
     >
       {copied ? "✓" : "📋"}
     </button>
@@ -56,7 +57,7 @@ function EventRow({ event, now }: { event: EventView; now: number }) {
       </div>
       <div className="flex items-center gap-1.5 shrink-0">
         <span className="font-mono text-[10px] opacity-80">{formatCountdown(event.next_spawn, now)}</span>
-        <WaypointButton code={event.waypoint_code} />
+        <WaypointButton code={event.waypoint_code} name={event.name} />
         {event.pinned ? (
           <button
             type="button"

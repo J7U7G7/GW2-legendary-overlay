@@ -1,7 +1,67 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAppStore } from "../store/app";
-import type { PinnedBossGroup, PinnedItem } from "../types/gw2";
+import type { PinnedBit, PinnedBossGroup, PinnedItem } from "../types/gw2";
+
+function wikiUrl(query: string) {
+  return `https://wiki.guildwars2.com/wiki/Special:Search?search=${encodeURIComponent(query)}`;
+}
+
+function BitRow({ bit }: { bit: PinnedBit }) {
+  const label =
+    bit.text ??
+    (bit.ref_id !== null ? `${bit.kind} #${bit.ref_id}` : `${bit.kind}`);
+  const wikiQuery =
+    bit.ref_id !== null && bit.kind !== "Text" ? `${bit.kind}:${bit.ref_id}` : bit.text ?? null;
+  return (
+    <li
+      className={`pl-9 pr-3 py-0.5 flex items-start gap-1.5 text-[10px] ${bit.done ? "opacity-40" : "opacity-90"}`}
+    >
+      <span
+        className={
+          bit.done
+            ? "text-[var(--accent-color)] mt-0.5"
+            : "opacity-50 mt-0.5"
+        }
+      >
+        {bit.done ? "✓" : "○"}
+      </span>
+      <span className={`flex-1 leading-tight ${bit.done ? "line-through" : ""}`}>{label}</span>
+      {wikiQuery && (
+        <a
+          className="opacity-50 hover:opacity-100 text-[10px]"
+          href={wikiUrl(wikiQuery)}
+          target="_blank"
+          rel="noreferrer"
+          title="Open wiki"
+        >
+          🔗
+        </a>
+      )}
+    </li>
+  );
+}
+
+function AchievementDetails({ item }: { item: PinnedItem }) {
+  return (
+    <div className="pl-6 pr-3 pb-1.5 pt-0.5 text-[10px] opacity-90 leading-snug">
+      {item.description && (
+        <p className="opacity-80 mb-1">{item.description}</p>
+      )}
+      {item.requirement && (
+        <p className="opacity-70 italic mb-1">{item.requirement}</p>
+      )}
+      <a
+        className="text-[var(--accent-color)] opacity-80 hover:opacity-100 underline text-[10px]"
+        href={wikiUrl(item.name)}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Open on wiki ↗
+      </a>
+    </div>
+  );
+}
 
 function formatCountdown(targetIso: string, now: number): string {
   const diff = new Date(targetIso).getTime() - now;
@@ -24,13 +84,14 @@ function ProgressBar({ ratio }: { ratio: number }) {
   );
 }
 
-function WaypointButton({ code }: { code: string | null }) {
+function WaypointButton({ code, name }: { code: string | null; name?: string }) {
   const [copied, setCopied] = useState(false);
   if (!code) return null;
+  const text = name ? `${name} ${code}` : code;
   const onClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(text);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -42,7 +103,7 @@ function WaypointButton({ code }: { code: string | null }) {
       type="button"
       onClick={onClick}
       className="px-1.5 py-0.5 text-[10px] rounded bg-white/10 hover:bg-white/20 font-mono"
-      title="Copy waypoint chat code"
+      title={`Copy '${text}' to clipboard`}
     >
       {copied ? "✓ copied" : "📋 WP"}
     </button>
@@ -51,6 +112,7 @@ function WaypointButton({ code }: { code: string | null }) {
 
 function AchievementRow({ item }: { item: PinnedItem }) {
   const unpin = useAppStore((s) => s.unpin);
+  const [open, setOpen] = useState(false);
   const ratio = item.completion_ratio;
   const ratioLabel =
     item.current !== null && item.max !== null && item.max > 0
@@ -58,43 +120,67 @@ function AchievementRow({ item }: { item: PinnedItem }) {
       : item.done
         ? "done"
         : "0%";
+  const hasDetails = !!(item.description || item.requirement || item.bits.length > 0);
 
   return (
-    <li className="pl-6 pr-3 py-1 flex items-center justify-between gap-2 text-[11px] border-t border-white/5">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={
-              item.done
-                ? "text-[var(--accent-color)] opacity-50"
-                : ratio > 0
-                  ? "text-amber-300"
-                  : "opacity-60"
-            }
-          >
-            {item.done ? "✓" : ratio > 0 ? "◐" : "○"}
-          </span>
-          <span className={item.done ? "opacity-40 truncate" : "opacity-95 truncate"} title={item.name}>
-            {item.name}
-          </span>
-        </div>
-        {!item.done && item.max !== null && item.max > 0 && (
-          <div className="ml-5 mt-0.5">
-            <ProgressBar ratio={ratio} />
-          </div>
-        )}
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="font-mono text-[10px] opacity-60">{ratioLabel}</span>
+    <li className="border-t border-white/5">
+      <div className="pl-6 pr-3 py-1 flex items-center justify-between gap-2 text-[11px]">
         <button
           type="button"
-          onClick={() => void unpin(item.id)}
-          className="opacity-40 hover:opacity-100 text-xs"
-          title="Unpin"
+          onClick={() => hasDetails && setOpen(!open)}
+          disabled={!hasDetails}
+          className="flex-1 min-w-0 text-left disabled:cursor-default"
+          title={hasDetails ? (open ? "Hide details" : "Show details") : undefined}
         >
-          ✕
+          <div className="flex items-center gap-1.5">
+            <span
+              className={
+                item.done
+                  ? "text-[var(--accent-color)] opacity-50"
+                  : ratio > 0
+                    ? "text-amber-300"
+                    : "opacity-60"
+              }
+            >
+              {item.done ? "✓" : ratio > 0 ? "◐" : "○"}
+            </span>
+            <span className={item.done ? "opacity-40 truncate" : "opacity-95 truncate"} title={item.name}>
+              {item.name}
+            </span>
+            {hasDetails && (
+              <span className="opacity-40 text-[10px] ml-auto">{open ? "▾" : "▸"}</span>
+            )}
+          </div>
+          {!item.done && item.max !== null && item.max > 0 && (
+            <div className="ml-5 mt-0.5">
+              <ProgressBar ratio={ratio} />
+            </div>
+          )}
         </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="font-mono text-[10px] opacity-60">{ratioLabel}</span>
+          <button
+            type="button"
+            onClick={() => void unpin(item.id)}
+            className="opacity-40 hover:opacity-100 text-xs"
+            title="Unpin"
+          >
+            ✕
+          </button>
+        </div>
       </div>
+      {open && hasDetails && (
+        <>
+          <AchievementDetails item={item} />
+          {item.bits.length > 0 && (
+            <ul className="pb-1">
+              {item.bits.map((bit) => (
+                <BitRow key={bit.index} bit={bit} />
+              ))}
+            </ul>
+          )}
+        </>
+      )}
     </li>
   );
 }
@@ -139,7 +225,7 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
             <span className={`font-mono ${isImminent ? "text-amber-300" : "opacity-80"}`}>
               ⏰ in {formatCountdown(group.next_spawn, now)}
             </span>
-            <WaypointButton code={group.waypoint_code} />
+            <WaypointButton code={group.waypoint_code} name={group.boss_name} />
             {hasAchievements && (
               <span className="opacity-60">
                 {done}/{group.achievements.length} done

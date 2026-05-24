@@ -60,7 +60,7 @@
       "tier": "low",
       "map": "Queensdale",
       "area": "Godslost Swamp",
-      "waypoint_code": "[&BPgAAAA=]",
+      "waypoint_code": "[&BPwAAAA=]",
       "schedule_utc": [
         "01:45",
         "03:45",
@@ -84,7 +84,7 @@
       "tier": "low",
       "map": "Caledon Forest",
       "area": "Wychmire Swamp",
-      "waypoint_code": "[&BEEFAAA=]",
+      "waypoint_code": "[&BEEBAAA=]",
       "schedule_utc": [
         "01:15",
         "03:15",
@@ -108,7 +108,7 @@
       "tier": "standard",
       "map": "Harathi Hinterlands",
       "area": "Modniir Gorge",
-      "waypoint_code": "[&BBkCAAA=]",
+      "waypoint_code": "[&BLEAAAA=]",
       "schedule_utc": [
         "01:30",
         "04:30",
@@ -148,7 +148,7 @@
       "tier": "standard",
       "map": "Blazeridge Steppes",
       "area": "Lowland Burns",
-      "waypoint_code": "[&BE4FAAA=]",
+      "waypoint_code": "[&BE4DAAA=]",
       "schedule_utc": [
         "01:00",
         "04:00",
@@ -168,7 +168,7 @@
       "tier": "standard",
       "map": "Mount Maelstrom",
       "area": "Maelstrom's Bile",
-      "waypoint_code": "[&BNQCAAA=]",
+      "waypoint_code": "[&BM0CAAA=]",
       "schedule_utc": [
         "00:30",
         "03:30",
@@ -208,7 +208,7 @@
       "tier": "standard",
       "map": "Frostgorge Sound",
       "area": "Frostwalk Tundra",
-      "waypoint_code": "[&BHoCAAA=]",
+      "waypoint_code": "[&BHwCAAA=]",
       "schedule_utc": [
         "02:30",
         "05:30",
@@ -247,7 +247,7 @@
       "tier": "hardcore",
       "map": "Bloodtide Coast",
       "area": "Firth of Revanion",
-      "waypoint_code": "[&BKgBAAA=]",
+      "waypoint_code": "[&BKoBAAA=]",
       "schedule_utc": [
         "01:00",
         "04:00",
@@ -284,6 +284,7 @@
       "name": "Dragon's Stand",
       "expansion": "HoT",
       "map": "Dragon's Stand",
+      "waypoint_code": "[&BHoIAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "00:30",
       "phases": [
@@ -304,6 +305,7 @@
       "name": "Night and the Enemy",
       "expansion": "HoT",
       "map": "Verdant Brink",
+      "waypoint_code": "[&BAgIAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "01:45",
       "phases": [
@@ -329,6 +331,7 @@
       "name": "Battle in Tarir",
       "expansion": "HoT",
       "map": "Auric Basin",
+      "waypoint_code": "[&BMYHAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "00:45",
       "phases": [
@@ -354,6 +357,7 @@
       "name": "Chak Gerent",
       "expansion": "HoT",
       "map": "Tangled Depths",
+      "waypoint_code": "[&BAMIAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "00:25",
       "phases": [
@@ -389,6 +393,7 @@
       "name": "The Path to Ascension: Augury Rock",
       "expansion": "PoF",
       "map": "Elon Riverlands",
+      "waypoint_code": "[&BFMKAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "01:00",
       "phases": [
@@ -404,6 +409,7 @@
       "name": "Junundu Rising",
       "expansion": "PoF",
       "map": "The Desolation",
+      "waypoint_code": "[&BMEKAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "00:30",
       "phases": [
@@ -439,6 +445,7 @@
       "name": "The Battle for the Jade Sea",
       "expansion": "EoD",
       "map": "Dragon's End",
+      "waypoint_code": "[&BDsNAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "00:05",
       "phases": [
@@ -459,6 +466,7 @@
       "name": "Aetherblade Assault",
       "expansion": "EoD",
       "map": "Echovald Wilds",
+      "waypoint_code": "[&BMcMAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "01:00",
       "phases": [
@@ -474,6 +482,7 @@
       "name": "Aetherblade Assault",
       "expansion": "EoD",
       "map": "Seitung Province",
+      "waypoint_code": "[&BGUNAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "01:30",
       "phases": [
@@ -489,6 +498,7 @@
       "name": "Kaineng Blackout",
       "expansion": "EoD",
       "map": "New Kaineng City",
+      "waypoint_code": "[&BCANAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "00:00",
       "phases": [
@@ -504,6 +514,7 @@
       "name": "Defense of Amnytas",
       "expansion": "SotO",
       "map": "Skywatch Archipelago",
+      "waypoint_code": "[&BCsOAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "01:00",
       "phases": [
@@ -519,6 +530,7 @@
       "name": "Defense of Amnytas",
       "expansion": "SotO",
       "map": "Amnytas",
+      "waypoint_code": "[&BD0OAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "01:30",
       "phases": [
@@ -534,6 +546,7 @@
       "name": "Convergences (Lowland Shore)",
       "expansion": "JW",
       "map": "Lowland Shore",
+      "waypoint_code": "[&BN8OAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "01:30",
       "phases": [
@@ -549,6 +562,7 @@
       "name": "Janthir Syntri Meta",
       "expansion": "JW",
       "map": "Janthir Syntri",
+      "waypoint_code": "[&BLgOAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "00:30",
       "phases": [

@@ -274,6 +274,7 @@ pub struct PinnedItemView {
     pub id: u32,
     pub name: String,
     pub description: Option<String>,
+    pub requirement: Option<String>,
     pub current: Option<i64>,
     pub max: Option<i64>,
     pub completion_ratio: f64,
@@ -283,6 +284,16 @@ pub struct PinnedItemView {
     pub associated_boss: Option<String>,
     pub next_event: Option<UpcomingEvent>,
     pub score: f64,
+    pub bits: Vec<PinnedBitView>,
+}
+
+#[derive(Serialize, Clone)]
+pub struct PinnedBitView {
+    pub index: u32,
+    pub kind: String,
+    pub ref_id: Option<i64>,
+    pub text: Option<String>,
+    pub done: bool,
 }
 
 #[derive(Serialize)]
@@ -521,7 +532,7 @@ pub async fn cmd_list_events(state: State<'_, AppState>) -> Result<Vec<EventView
             expansion: meta.expansion.clone().unwrap_or_else(|| "Core".to_string()),
             kind: EventKind::MetaEvent,
             map: meta.map.clone(),
-            waypoint_code: None,
+            waypoint_code: meta.waypoint_code.clone(),
             next_spawn: instant.next.starts_at,
             duration_minutes: next_dur,
             pinned: pinned_set.contains(&meta.id),
@@ -674,7 +685,7 @@ fn lookup_event(
             expansion: m.expansion.clone().unwrap_or_else(|| "Core".into()),
             next_spawn: instant.next.starts_at,
             duration_minutes: next_dur,
-            waypoint_code: None,
+            waypoint_code: m.waypoint_code.clone(),
         });
     }
     if let Some(lla) = &schedule.ley_line_anomaly {
@@ -714,8 +725,9 @@ fn load_pinned_achievement_views(
     let rows = db.with_conn(|c| {
         let mut stmt = c.prepare(
             "SELECT pin.achievement_id, pin.collection_key,
-                    a.name, a.description, COALESCE(a.points, 0),
-                    p.current, p.max, COALESCE(p.done, 0),
+                    a.name, a.description, a.requirement, COALESCE(a.points, 0),
+                    a.bits,
+                    p.current, p.max, COALESCE(p.done, 0), p.bits,
                     md.associated_boss, md.estimated_time_minutes
              FROM pinned_achievements pin
              LEFT JOIN achievements a ON a.id = pin.achievement_id
@@ -729,12 +741,15 @@ fn load_pinned_achievement_views(
                 collection_key: r.get(1)?,
                 name: r.get::<_, Option<String>>(2)?,
                 description: r.get(3)?,
-                points: r.get(4)?,
-                current: r.get(5)?,
-                max: r.get(6)?,
-                done: r.get::<_, i64>(7)? != 0,
-                associated_boss: r.get(8)?,
-                effort_minutes: r.get::<_, Option<i64>>(9)?.unwrap_or(30) as u32,
+                requirement: r.get(4)?,
+                points: r.get(5)?,
+                bits_def_json: r.get(6)?,
+                current: r.get(7)?,
+                max: r.get(8)?,
+                done: r.get::<_, i64>(9)? != 0,
+                bits_done_json: r.get(10)?,
+                associated_boss: r.get(11)?,
+                effort_minutes: r.get::<_, Option<i64>>(12)?.unwrap_or(30) as u32,
             })
         })?;
         let mut out = Vec::new();
@@ -770,10 +785,12 @@ fn load_pinned_achievement_views(
                 .associated_boss
                 .as_ref()
                 .and_then(|boss| upcoming.iter().find(|e| &e.id == boss).cloned());
+            let bits = parse_bits(&r.bits_def_json, &r.bits_done_json);
             PinnedItemView {
                 id: r.id,
                 name: r.name.unwrap_or_else(|| format!("Achievement #{}", r.id)),
                 description: r.description,
+                requirement: r.requirement,
                 current: r.current,
                 max: r.max,
                 completion_ratio: ratio,
@@ -783,10 +800,51 @@ fn load_pinned_achievement_views(
                 associated_boss: r.associated_boss,
                 next_event,
                 score: s,
+                bits,
             }
         })
         .collect();
     Ok(items)
+}
+
+/// Parse the cached `achievements.bits` JSON array against the user's
+/// `account_progress.bits` (list of completed indices) and return a flat
+/// view ready for the UI.
+fn parse_bits(def_json: &Option<String>, done_json: &Option<String>) -> Vec<PinnedBitView> {
+    let Some(def_str) = def_json else { return vec![] };
+    let defs: Vec<serde_json::Value> = match serde_json::from_str(def_str) {
+        Ok(v) => v,
+        Err(_) => return vec![],
+    };
+    let done_set: std::collections::HashSet<u32> = done_json
+        .as_ref()
+        .and_then(|s| serde_json::from_str::<Vec<u32>>(s).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+
+    defs.into_iter()
+        .enumerate()
+        .map(|(idx, bit)| {
+            let kind = bit
+                .get("type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Text")
+                .to_string();
+            let ref_id = bit.get("id").and_then(|v| v.as_i64());
+            let text = bit
+                .get("text")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            PinnedBitView {
+                index: idx as u32,
+                kind,
+                ref_id,
+                text,
+                done: done_set.contains(&(idx as u32)),
+            }
+        })
+        .collect()
 }
 
 struct PinnedRow {
@@ -794,6 +852,9 @@ struct PinnedRow {
     collection_key: Option<String>,
     name: Option<String>,
     description: Option<String>,
+    requirement: Option<String>,
+    bits_def_json: Option<String>,
+    bits_done_json: Option<String>,
     points: i64,
     current: Option<i64>,
     max: Option<i64>,

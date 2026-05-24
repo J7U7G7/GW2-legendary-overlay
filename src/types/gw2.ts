@@ -82,10 +82,19 @@ export type LegendaryCollection = {
   done_count: number;
 };
 
+export type PinnedBit = {
+  index: number;
+  kind: string;
+  ref_id: number | null;
+  text: string | null;
+  done: boolean;
+};
+
 export type PinnedItem = {
   id: number;
   name: string;
   description: string | null;
+  requirement: string | null;
   current: number | null;
   max: number | null;
   completion_ratio: number;
@@ -95,6 +104,7 @@ export type PinnedItem = {
   associated_boss: string | null;
   next_event: UpcomingEvent | null;
   score: number;
+  bits: PinnedBit[];
 };
 
 export type PinnedBossGroup = {

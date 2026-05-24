@@ -49,6 +49,8 @@ pub struct MetaEvent {
     #[serde(default)]
     pub expansion: Option<String>,
     pub map: String,
+    #[serde(default)]
+    pub waypoint_code: Option<String>,
     pub cycle_minutes: u32,
     /// Anchor time as "HH:MM" UTC — the phase[0] start of the canonical cycle.
     pub anchor_utc: String,

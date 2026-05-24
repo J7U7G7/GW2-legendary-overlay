@@ -228,6 +228,7 @@ mod tests {
             name: "Dragon's Stand".into(),
             expansion: None,
             map: "Dragon's Stand".into(),
+            waypoint_code: None,
             cycle_minutes: 120,
             anchor_utc: "00:30".into(),
             phases: vec![
