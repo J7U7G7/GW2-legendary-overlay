@@ -23,6 +23,7 @@ pub struct AppState {
     pub db: Arc<Db>,
     pub engine: Mutex<Option<SyncEngine>>,
     pub schedule: Arc<Schedule>,
+    pub app_handle: tauri::AppHandle,
 }
 
 #[derive(Serialize)]
@@ -74,7 +75,12 @@ pub async fn cmd_set_api_key(state: State<'_, AppState>, key: String) -> Result<
         prev.shutdown();
     }
     let client = Arc::new(ApiClient::new(Some(parsed.clone()))?);
-    let engine = SyncEngine::new(client, Arc::clone(&state.db));
+    let engine = SyncEngine::new(
+        client,
+        Arc::clone(&state.db),
+        Arc::clone(&state.schedule),
+        state.app_handle.clone(),
+    );
     engine.start();
     *engine_guard = Some(engine);
 

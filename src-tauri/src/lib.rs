@@ -37,6 +37,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_notification::init())
         .on_window_event(|window, event| {
             // Closing the secondary events window hides it instead of
             // killing the whole app. The primary "main" window keeps the
@@ -101,7 +102,12 @@ pub fn run() {
             let engine = match load_api_key(&db) {
                 Ok(Some(key)) => match ApiClient::new(Some(key)) {
                     Ok(client) => {
-                        let engine = SyncEngine::new(Arc::new(client), Arc::clone(&db));
+                        let engine = SyncEngine::new(
+                            Arc::new(client),
+                            Arc::clone(&db),
+                            Arc::clone(&schedule),
+                            app.handle().clone(),
+                        );
                         engine.start();
                         info!("sync engine started with stored API key");
                         Some(engine)
@@ -121,7 +127,12 @@ pub fn run() {
                 }
             };
 
-            app.manage(AppState { db, engine: Mutex::new(engine), schedule });
+            app.manage(AppState {
+                db,
+                engine: Mutex::new(engine),
+                schedule,
+                app_handle: app.handle().clone(),
+            });
 
             // Explicitly restore previously-saved window position/size for
             // both windows. The plugin doesn't override config-declared size
