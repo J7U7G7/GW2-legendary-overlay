@@ -13,7 +13,7 @@ use tracing::{error, info, warn};
 use crate::api::client::ApiClient;
 use crate::db::repository::Db;
 use crate::sync::{achievements, progress, wizardsvault};
-use crate::timers::engine::next_spawn;
+use crate::timers::engine::{current_meta_phase, next_spawn};
 use crate::timers::schedule::Schedule;
 
 type NotifiedSet = HashSet<(String, chrono::DateTime<Utc>)>;
@@ -218,35 +218,50 @@ fn check_pinned_boss_notifications(
         .and_then(|s| s.parse::<i64>().ok())
         .unwrap_or(DEFAULT_BOSS_NOTIFY_LEAD_MINUTES);
 
-    for boss_id in pinned {
-        let Some(boss) = schedule.world_bosses.iter().find(|b| b.id == boss_id) else {
-            continue;
+    for pinned_id in pinned {
+        // Resolve to a (name, map, next_spawn) triple — works for both
+        // world bosses and meta events since they're both pinned via the
+        // pinned_bosses table.
+        let resolved = if let Some(boss) =
+            schedule.world_bosses.iter().find(|b| b.id == pinned_id)
+        {
+            Some((boss.name.clone(), boss.map.clone(), next_spawn(boss, now)))
+        } else if let Some(meta) =
+            schedule.meta_events.iter().find(|m| m.id == pinned_id)
+        {
+            let instant = current_meta_phase(meta, now);
+            Some((
+                format!("{} — {}", meta.name, instant.next.name),
+                meta.map.clone(),
+                instant.next.starts_at,
+            ))
+        } else {
+            None
         };
-        let next = next_spawn(boss, now);
+        let Some((name, map, next)) = resolved else { continue };
+
         let mins_until = (next - now).num_minutes();
         if !(0..=lead).contains(&mins_until) {
             continue;
         }
-        let key = (boss_id.clone(), next);
+        let key = (pinned_id.clone(), next);
         let mut guard = notified.lock().expect("notified mutex poisoned");
         if !guard.insert(key) {
-            // Already notified for this spawn — skip.
             continue;
         }
-        // Garbage-collect entries whose spawn is in the past.
         guard.retain(|(_, t)| *t > now - chrono::Duration::hours(1));
         drop(guard);
 
-        let title = format!("GW2: {} spawning soon", boss.name);
+        let title = format!("GW2: {name} spawning soon");
         let body = if mins_until <= 0 {
-            format!("now at {}", boss.map)
+            format!("now at {map}")
         } else {
-            format!("in {}m at {}", mins_until, boss.map)
+            format!("in {mins_until}m at {map}")
         };
         if let Err(e) = app.notification().builder().title(&title).body(&body).show() {
-            warn!(error = %e, boss = %boss.id, "notification failed");
+            warn!(error = %e, id = %pinned_id, "notification failed");
         } else {
-            info!(boss = %boss.id, mins_until, "sent boss notification");
+            info!(id = %pinned_id, mins_until, "sent event notification");
         }
     }
     Ok(())
