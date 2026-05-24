@@ -8,10 +8,9 @@ pub mod timers;
 mod commands;
 
 use std::fs;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use tauri::Manager;
-use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
@@ -104,10 +103,33 @@ pub fn run() {
                 return Err(Box::new(e));
             }
 
-            // If a key is already stored, build the client + engine eagerly so
-            // sync starts at boot. Otherwise the UI will prompt for one.
-            let engine = match load_api_key(&db) {
-                Ok(Some(key)) => match ApiClient::new(Some(key)) {
+            // Manage state EARLY so the secondary windows' JS can invoke
+            // commands the moment their webview boots. The engine itself
+            // is wired in below — it can take a moment (ApiClient build,
+            // tokio spawn) and we don't want to keep the windows blocked
+            // on it.
+            app.manage(AppState {
+                db: Arc::clone(&db),
+                engine: Mutex::new(None),
+                schedule: Arc::clone(&schedule),
+                app_handle: app.handle().clone(),
+            });
+
+            // Restore window position/size for every window. Plugin
+            // declares the save handlers; we still trigger the restore
+            // explicitly because tauri.conf.json declares default sizes.
+            for label in ["main", "bosses", "achievements"] {
+                if let Some(window) = app.get_webview_window(label) {
+                    if let Err(e) = window.restore_state(StateFlags::all()) {
+                        warn!(label, error = %e, "window state restore failed");
+                    }
+                }
+            }
+
+            // If a key is already stored, build the client + engine eagerly
+            // so sync starts at boot. Otherwise the UI will prompt for one.
+            if let Ok(Some(key)) = load_api_key(&db) {
+                match ApiClient::new(Some(key)) {
                     Ok(client) => {
                         let engine = SyncEngine::new(
                             Arc::new(client),
@@ -117,39 +139,15 @@ pub fn run() {
                         );
                         engine.start();
                         info!("sync engine started with stored API key");
-                        Some(engine)
+                        let state: tauri::State<AppState> = app.state();
+                        *state.engine.lock().expect("engine mutex poisoned") = Some(engine);
                     }
                     Err(e) => {
                         warn!(error = %e, "failed to build API client from stored key");
-                        None
-                    }
-                },
-                Ok(None) => {
-                    info!("no stored API key, waiting for user to provide one");
-                    None
-                }
-                Err(e) => {
-                    warn!(error = %e, "failed to load stored API key");
-                    None
-                }
-            };
-
-            app.manage(AppState {
-                db,
-                engine: Mutex::new(engine),
-                schedule,
-                app_handle: app.handle().clone(),
-            });
-
-            // Explicitly restore previously-saved window position/size for
-            // all three windows. The plugin doesn't override config-declared
-            // size on its own, so we trigger the restore from setup.
-            for label in ["main", "bosses", "achievements"] {
-                if let Some(window) = app.get_webview_window(label) {
-                    if let Err(e) = window.restore_state(StateFlags::all()) {
-                        warn!(label, error = %e, "window state restore failed");
                     }
                 }
+            } else {
+                info!("no stored API key, waiting for user to provide one");
             }
             Ok(())
         })

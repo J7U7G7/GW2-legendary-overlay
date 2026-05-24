@@ -1,10 +1,9 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use chrono::Utc;
 use rusqlite::params;
 use serde::Serialize;
 use tauri::State;
-use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::api::auth::{ApiKey, clear_api_key, load_api_key, store_api_key};
@@ -70,7 +69,7 @@ pub async fn cmd_set_api_key(state: State<'_, AppState>, key: String) -> Result<
     store_api_key(&state.db, &parsed)?;
     info!(account = parsed.account_id(), "API key stored");
 
-    let mut engine_guard = state.engine.lock().await;
+    let mut engine_guard = state.engine.lock().expect("engine mutex poisoned");
     if let Some(prev) = engine_guard.take() {
         prev.shutdown();
     }
@@ -100,7 +99,7 @@ pub async fn cmd_check_api_key(state: State<'_, AppState>) -> Result<Option<ApiK
 
 #[tauri::command]
 pub async fn cmd_clear_api_key(state: State<'_, AppState>) -> Result<()> {
-    let mut engine_guard = state.engine.lock().await;
+    let mut engine_guard = state.engine.lock().expect("engine mutex poisoned");
     if let Some(prev) = engine_guard.take() {
         prev.shutdown();
     }
@@ -113,14 +112,18 @@ pub async fn cmd_clear_api_key(state: State<'_, AppState>) -> Result<()> {
 /// interval tick. Achievement definitions bulk sync only runs at startup.
 #[tauri::command]
 pub async fn cmd_sync_now(state: State<'_, AppState>) -> Result<SyncReport> {
-    let engine_guard = state.engine.lock().await;
-    let Some(engine) = engine_guard.as_ref() else {
-        return Err(AppError::NoApiKey);
+    // Grab the snapshot Arc and drop the guard before any await — a
+    // std::sync::Mutex cannot be held across awaits.
+    let snapshot = {
+        let guard = state.engine.lock().expect("engine mutex poisoned");
+        let Some(engine) = guard.as_ref() else {
+            return Err(AppError::NoApiKey);
+        };
+        engine.snapshot()
     };
 
     let key = load_api_key(&state.db)?.ok_or(AppError::NoApiKey)?;
     let client = ApiClient::new(Some(key))?;
-    let snapshot = engine.snapshot();
 
     let progress_changes = progress::sync_progress(&client, &state.db, &snapshot).await?;
     let wv_daily = wizardsvault::sync_daily(&client, &state.db).await?;
