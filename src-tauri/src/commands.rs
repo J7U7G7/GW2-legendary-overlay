@@ -210,6 +210,127 @@ pub async fn cmd_save_state_and_quit(app: tauri::AppHandle) -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
+// Account inventory search (bank / materials / characters / shared)
+// ============================================================================
+
+#[derive(Serialize)]
+pub struct AccountItemLocation {
+    pub location: String,
+    pub location_detail: Option<String>,
+    pub count: u32,
+}
+
+#[derive(Serialize)]
+pub struct AccountItemResult {
+    pub item_id: u32,
+    pub name: String,
+    pub rarity: Option<String>,
+    pub total: u32,
+    pub locations: Vec<AccountItemLocation>,
+}
+
+#[tauri::command]
+pub async fn cmd_sync_account_items(state: State<'_, AppState>) -> Result<usize> {
+    let key = load_api_key(&state.db)?.ok_or(AppError::NoApiKey)?;
+    let client = ApiClient::new(Some(key))?;
+    let n = crate::sync::inventory::sync_account_items(&client, &state.db).await?;
+    // Warm the items_cache so names resolve for everything we just inserted.
+    let ids = crate::sync::inventory::distinct_item_ids(&state.db)?;
+    if !ids.is_empty() {
+        // Skip ids we already have to avoid hammering the items endpoint.
+        let cached: std::collections::HashSet<u32> = state.db.with_conn(|c| {
+            let placeholders =
+                std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
+            let sql = format!("SELECT id FROM items_cache WHERE id IN ({placeholders})");
+            let params: Vec<rusqlite::types::Value> = ids
+                .iter()
+                .map(|id| rusqlite::types::Value::Integer(*id as i64))
+                .collect();
+            let mut stmt = c.prepare(&sql)?;
+            let rows = stmt
+                .query_map(rusqlite::params_from_iter(params.iter()), |r| {
+                    Ok(r.get::<_, i64>(0)? as u32)
+                })?
+                .filter_map(|r| r.ok())
+                .collect();
+            Ok(rows)
+        })?;
+        let missing: Vec<u32> =
+            ids.into_iter().filter(|i| !cached.contains(i)).collect();
+        if !missing.is_empty() {
+            let _ = crate::sync::items::fetch_and_cache_items(&client, &state.db, &missing).await;
+        }
+    }
+    Ok(n)
+}
+
+#[tauri::command]
+pub async fn cmd_search_account_items(
+    state: State<'_, AppState>,
+    query: String,
+    limit: Option<u32>,
+) -> Result<Vec<AccountItemResult>> {
+    let q = query.trim();
+    if q.is_empty() {
+        return Ok(vec![]);
+    }
+    let like = format!("%{q}%");
+    let limit = limit.unwrap_or(30).min(100) as i64;
+    state.db.with_conn(|c| {
+        // Pull the matching item_ids ordered by name length (shorter ≈ closer
+        // match) then by name. Then for each id, pull every location row.
+        let mut id_stmt = c.prepare(
+            "SELECT DISTINCT ai.item_id, ic.name, ic.rarity
+             FROM account_items ai
+             JOIN items_cache ic ON ic.id = ai.item_id
+             WHERE ic.name LIKE ?1 COLLATE NOCASE
+             ORDER BY length(ic.name), ic.name
+             LIMIT ?2",
+        )?;
+        let mapped = id_stmt
+            .query_map(rusqlite::params![like, limit], |r| {
+                Ok((
+                    r.get::<_, i64>(0)? as u32,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, Option<String>>(2)?,
+                ))
+            })?
+            .filter_map(|r| r.ok())
+            .collect::<Vec<_>>();
+
+        let mut loc_stmt = c.prepare(
+            "SELECT location, location_detail, count
+             FROM account_items
+             WHERE item_id = ?1
+             ORDER BY location, location_detail",
+        )?;
+
+        let mut out = Vec::with_capacity(mapped.len());
+        for (id, name, rarity) in mapped {
+            let locations: Vec<AccountItemLocation> = loc_stmt
+                .query_map(rusqlite::params![id], |r| {
+                    Ok(AccountItemLocation {
+                        location: r.get(0)?,
+                        location_detail: r.get(1)?,
+                        count: r.get::<_, i64>(2)? as u32,
+                    })
+                })?
+                .filter_map(|r| r.ok())
+                .collect();
+            let total = locations.iter().map(|l| l.count).sum();
+            out.push(AccountItemResult {
+                item_id: id,
+                name,
+                rarity,
+                total,
+                locations,
+            });
+        }
+        Ok(out)
+    })
+}
+
 /// Fire a sample notification so the user can verify the toast pipeline
 /// works without waiting for a real boss spawn.
 #[tauri::command]

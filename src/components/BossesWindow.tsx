@@ -62,14 +62,17 @@ export function BossesWindow() {
           </button>
         </div>
       </header>
-      {!collapsed &&
-        (apiKeyStatus ? (
-          <BossesView />
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-xs opacity-60 px-4 text-center">
-            Configure your API key in the main overlay first.
-          </div>
-        ))}
+      {!collapsed && (
+        <div className="ui-zoom flex-1 flex flex-col overflow-hidden">
+          {apiKeyStatus ? (
+            <BossesView />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-xs opacity-60 px-4 text-center">
+              Configure your API key in the main overlay first.
+            </div>
+          )}
+        </div>
+      )}
     </main>
   );
 }

@@ -35,16 +35,12 @@ function applyToDom(a: AppearanceSettings) {
   root.setProperty("--bg-opacity", String(a.opacity));
   const { r, g, b } = hexToRgb(a.background_color);
   root.setProperty("--bg-color-rgba", `rgba(${r}, ${g}, ${b}, ${a.opacity})`);
-  // Most of the UI uses explicit Tailwind pixel sizes (text-[10px], etc.)
-  // so changing document.body.font-size does nothing visible. Use CSS
-  // zoom on the body instead — it scales the entire rendered tree
-  // uniformly, which is what the user actually wants from a 'font size'
-  // slider on an overlay. 12 is the in-app baseline (matches text-xs).
-  // WebView2 supports zoom; Firefox would need a transform fallback,
-  // but we ship on Windows-only.
-  (document.body.style as CSSStyleDeclaration & { zoom?: string }).zoom = String(
-    a.font_size / 12,
-  );
+  // Most of the UI uses explicit Tailwind pixel sizes (text-[10px],
+  // etc.), so changing document.body.fontSize does nothing visible.
+  // We expose `--ui-scale` and let each window's *content* div
+  // (NOT the header — buttons there must stay clickable + visible)
+  // apply zoom: var(--ui-scale). 12 is the baseline (matches text-xs).
+  root.setProperty("--ui-scale", String(a.font_size / 12));
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({

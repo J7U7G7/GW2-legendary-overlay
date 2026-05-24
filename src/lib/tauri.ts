@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  AccountItemResult,
   AchievementSearchResult,
   ApiKeyStatus,
   AppearanceSettings,
@@ -44,4 +45,7 @@ export const api = {
   getNotificationLead: () => invoke<number>("cmd_get_notification_lead"),
   setNotificationLead: (minutes: number) =>
     invoke<void>("cmd_set_notification_lead", { minutes }),
+  syncAccountItems: () => invoke<number>("cmd_sync_account_items"),
+  searchAccountItems: (query: string, limit = 30) =>
+    invoke<AccountItemResult[]>("cmd_search_account_items", { query, limit }),
 };

@@ -7,6 +7,14 @@
   --text-color: #e8e8e8;
   --bg-color: #000000;
   --bg-opacity: 0.85;
+  --ui-scale: 1;
+}
+
+/* Apply to the content area of each window (NOT the header) so the
+   user-controlled font/scale slider zooms the readable text without
+   pushing the close / settings buttons off-screen. */
+.ui-zoom {
+  zoom: var(--ui-scale, 1);
 }
 
 html, body, #root {

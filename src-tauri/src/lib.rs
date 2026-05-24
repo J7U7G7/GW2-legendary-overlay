@@ -75,6 +75,8 @@ pub fn run() {
             commands::cmd_test_notification,
             commands::cmd_get_notification_lead,
             commands::cmd_set_notification_lead,
+            commands::cmd_sync_account_items,
+            commands::cmd_search_account_items,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

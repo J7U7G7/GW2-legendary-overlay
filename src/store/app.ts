@@ -14,7 +14,7 @@ import type {
 type LoadingState = "idle" | "checking" | "syncing" | "error";
 /// `pinned` is kept for back-compat with old persisted state; the active
 /// tabs in the main window are events/catalog/search/wv.
-export type ViewKey = "pinned" | "events" | "catalog" | "search" | "wv";
+export type ViewKey = "pinned" | "events" | "catalog" | "search" | "wv" | "items";
 
 type AppStore = {
   apiKeyStatus: ApiKeyStatus | null;

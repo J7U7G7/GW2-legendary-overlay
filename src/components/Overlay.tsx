@@ -11,6 +11,7 @@ import { useSettingsStore } from "../store/settings";
 import { ApiKeySetup } from "./ApiKeySetup";
 import { CatalogView } from "./CatalogView";
 import { EventsTab } from "./EventsTab";
+import { MyItemsView } from "./MyItemsView";
 import { SearchView } from "./SearchView";
 import { SettingsPanel } from "./SettingsPanel";
 import { WizardsVaultPanel } from "./WizardsVaultPanel";
@@ -20,6 +21,7 @@ const TABS: TabConfig[] = [
   { id: "events", label: "Events" },
   { id: "catalog", label: "Catalog" },
   { id: "search", label: "Search" },
+  { id: "items", label: "Items" },
   { id: "wv", label: "WV" },
 ];
 
@@ -89,10 +91,11 @@ export function Overlay() {
       ) : (
         <>
           <Tabs current={view} onSelect={setView} pinnedCount={pinnedCount} />
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="ui-zoom flex-1 flex flex-col overflow-hidden">
             {view === "events" && <EventsTab />}
             {view === "catalog" && <CatalogView />}
             {view === "search" && <SearchView />}
+            {view === "items" && <MyItemsView />}
             {view === "wv" && (
               <div className="flex-1 overflow-y-auto py-1">
                 <WizardsVaultPanel label="Daily" period={wv?.daily ?? null} />

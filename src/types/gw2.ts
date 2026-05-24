@@ -46,6 +46,20 @@ export type ProgressSummary = {
   points_earned: number;
 };
 
+export type AccountItemLocation = {
+  location: string;
+  location_detail: string | null;
+  count: number;
+};
+
+export type AccountItemResult = {
+  item_id: number;
+  name: string;
+  rarity: string | null;
+  total: number;
+  locations: AccountItemLocation[];
+};
+
 export type AppearanceSettings = {
   opacity: number;
   accent_color: string;

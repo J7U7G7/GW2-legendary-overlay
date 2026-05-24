@@ -178,6 +178,53 @@ pub async fn get_items_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<ItemDetai
     c.get_json(&format!("/v2/items?ids={ids_csv}")).await
 }
 
+#[derive(Debug, Deserialize)]
+pub struct InventorySlot {
+    pub id: u32,
+    pub count: u32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MaterialStack {
+    pub id: u32,
+    pub count: u32,
+    #[serde(default)]
+    pub category: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CharacterBag {
+    #[serde(default)]
+    pub inventory: Vec<Option<InventorySlot>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Character {
+    pub name: String,
+    #[serde(default)]
+    pub bags: Vec<Option<CharacterBag>>,
+}
+
+#[allow(dead_code)]
+pub async fn get_account_bank(c: &ApiClient) -> Result<Vec<Option<InventorySlot>>> {
+    c.get_json("/v2/account/bank").await
+}
+
+#[allow(dead_code)]
+pub async fn get_account_materials(c: &ApiClient) -> Result<Vec<MaterialStack>> {
+    c.get_json("/v2/account/materials").await
+}
+
+#[allow(dead_code)]
+pub async fn get_shared_inventory(c: &ApiClient) -> Result<Vec<Option<InventorySlot>>> {
+    c.get_json("/v2/account/inventory").await
+}
+
+#[allow(dead_code)]
+pub async fn get_characters_all(c: &ApiClient) -> Result<Vec<Character>> {
+    c.get_json("/v2/characters?ids=all").await
+}
+
 #[allow(dead_code)]
 pub async fn get_wizardsvault_daily(c: &ApiClient) -> Result<WizardsVaultPeriod> {
     c.get_json("/v2/account/wizardsvault/daily").await
