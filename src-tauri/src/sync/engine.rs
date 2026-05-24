@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use tokio::task::JoinHandle;
+use tauri::async_runtime::{JoinHandle, spawn};
 use tokio::time::{MissedTickBehavior, interval};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
@@ -67,7 +67,7 @@ impl SyncEngine {
         let client = Arc::clone(&self.client);
         let db = Arc::clone(&self.db);
         let token = self.token.clone();
-        tokio::spawn(async move {
+        spawn(async move {
             let stale = achievements::is_stale(&db, ACHIEVEMENTS_STALE_DAYS).unwrap_or(true);
             if !stale {
                 info!("achievement definitions are fresh, skipping bulk sync");
@@ -92,7 +92,7 @@ impl SyncEngine {
         let db = Arc::clone(&self.db);
         let snap = Arc::clone(&self.snapshot);
         let token = self.token.clone();
-        tokio::spawn(async move {
+        spawn(async move {
             let mut tick = interval(PROGRESS_INTERVAL);
             tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
             loop {
@@ -119,7 +119,7 @@ impl SyncEngine {
         let client = Arc::clone(&self.client);
         let db = Arc::clone(&self.db);
         let token = self.token.clone();
-        tokio::spawn(async move {
+        spawn(async move {
             let mut tick = interval(WIZARDSVAULT_INTERVAL);
             tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
             loop {
