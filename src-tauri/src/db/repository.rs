@@ -63,6 +63,42 @@ impl Db {
     pub fn count_achievements(&self) -> Result<i64> {
         self.with_conn(|c| Ok(c.query_row("SELECT COUNT(*) FROM achievements", [], |r| r.get(0))?))
     }
+
+    pub fn pin_achievement(&self, achievement_id: u32, collection_key: Option<&str>) -> Result<()> {
+        self.with_conn(|c| {
+            c.execute(
+                "INSERT INTO pinned_achievements (achievement_id, collection_key)
+                 VALUES (?1, ?2)
+                 ON CONFLICT(achievement_id) DO UPDATE SET collection_key = excluded.collection_key",
+                params![achievement_id, collection_key],
+            )?;
+            Ok(())
+        })
+    }
+
+    pub fn unpin_achievement(&self, achievement_id: u32) -> Result<()> {
+        self.with_conn(|c| {
+            c.execute(
+                "DELETE FROM pinned_achievements WHERE achievement_id = ?1",
+                params![achievement_id],
+            )?;
+            Ok(())
+        })
+    }
+
+    pub fn list_pinned_ids(&self) -> Result<Vec<u32>> {
+        self.with_conn(|c| {
+            let mut stmt = c.prepare(
+                "SELECT achievement_id FROM pinned_achievements ORDER BY pinned_at",
+            )?;
+            let mapped = stmt.query_map([], |r| Ok(r.get::<_, i64>(0)? as u32))?;
+            let mut out = Vec::new();
+            for row in mapped {
+                out.push(row?);
+            }
+            Ok(out)
+        })
+    }
 }
 
 #[cfg(test)]
@@ -83,5 +119,41 @@ mod tests {
     fn count_achievements_starts_at_zero() {
         let db = Db::open_in_memory().unwrap();
         assert_eq!(db.count_achievements().unwrap(), 0);
+    }
+
+    #[test]
+    fn pin_unpin_round_trip() {
+        let db = Db::open_in_memory().unwrap();
+        assert!(db.list_pinned_ids().unwrap().is_empty());
+        db.pin_achievement(1234, Some("aurora")).unwrap();
+        db.pin_achievement(5678, None).unwrap();
+        let pinned = db.list_pinned_ids().unwrap();
+        assert_eq!(pinned, vec![1234, 5678]);
+        db.unpin_achievement(1234).unwrap();
+        assert_eq!(db.list_pinned_ids().unwrap(), vec![5678]);
+    }
+
+    #[test]
+    fn pinning_same_id_updates_collection() {
+        let db = Db::open_in_memory().unwrap();
+        db.pin_achievement(1234, None).unwrap();
+        db.pin_achievement(1234, Some("vision")).unwrap();
+        // Still one row, collection updated
+        let count: i64 = db
+            .with_conn(|c| {
+                Ok(c.query_row("SELECT COUNT(*) FROM pinned_achievements", [], |r| r.get(0))?)
+            })
+            .unwrap();
+        assert_eq!(count, 1);
+        let collection: Option<String> = db
+            .with_conn(|c| {
+                Ok(c.query_row(
+                    "SELECT collection_key FROM pinned_achievements WHERE achievement_id = 1234",
+                    [],
+                    |r| r.get(0),
+                )?)
+            })
+            .unwrap();
+        assert_eq!(collection.as_deref(), Some("vision"));
     }
 }

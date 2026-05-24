@@ -5,7 +5,12 @@ use crate::error::Result;
 
 const MIGRATIONS: &[&str] = &[
     // v1: initial schema (spec §5.2)
-    r#"
+    INITIAL_SCHEMA,
+    // v2: pinning + legendary collections
+    PIN_SCHEMA,
+];
+
+const INITIAL_SCHEMA: &str = r#"
     CREATE TABLE achievements (
         id INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
@@ -72,8 +77,34 @@ const MIGRATIONS: &[&str] = &[
     CREATE INDEX idx_daily_assignments_date ON daily_assignments(date);
     CREATE INDEX idx_account_progress_done ON account_progress(done);
     CREATE INDEX idx_wizardsvault_period ON wizardsvault(period_type, period_start);
-    "#,
-];
+"#;
+
+const PIN_SCHEMA: &str = r#"
+    CREATE TABLE pinned_achievements (
+        achievement_id INTEGER PRIMARY KEY,
+        collection_key TEXT,
+        pinned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE legendary_collections (
+        key TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        generation TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE legendary_collection_members (
+        collection_key TEXT NOT NULL,
+        achievement_id INTEGER NOT NULL,
+        step INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (collection_key, achievement_id),
+        FOREIGN KEY (collection_key) REFERENCES legendary_collections(key) ON DELETE CASCADE
+    );
+
+    CREATE INDEX idx_legendary_members_collection ON legendary_collection_members(collection_key);
+    CREATE INDEX idx_pinned_collection ON pinned_achievements(collection_key);
+"#;
 
 pub fn migrate(conn: &Connection) -> Result<()> {
     conn.execute(
@@ -125,6 +156,9 @@ mod tests {
             "achievement_metadata",
             "achievements",
             "daily_assignments",
+            "legendary_collection_members",
+            "legendary_collections",
+            "pinned_achievements",
             "settings",
             "wizardsvault",
         ] {

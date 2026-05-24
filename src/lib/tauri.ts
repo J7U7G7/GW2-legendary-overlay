@@ -1,7 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  AchievementSearchResult,
   ApiKeyStatus,
+  LegendaryCollection,
+  PinnedItem,
   ProgressSummary,
   SyncReport,
   UpcomingEvent,
@@ -17,4 +20,13 @@ export const api = {
     invoke<UpcomingEvent[]>("cmd_get_upcoming_events", { horizonMinutes }),
   getWizardsVaultState: () => invoke<WizardsVaultState>("cmd_get_wizardsvault_state"),
   getProgressSummary: () => invoke<ProgressSummary>("cmd_get_progress_summary"),
+  searchAchievements: (query: string, limit = 30) =>
+    invoke<AchievementSearchResult[]>("cmd_search_achievements", { query, limit }),
+  pinAchievement: (achievementId: number, collectionKey: string | null = null) =>
+    invoke<void>("cmd_pin_achievement", { achievementId, collectionKey }),
+  unpinAchievement: (achievementId: number) =>
+    invoke<void>("cmd_unpin_achievement", { achievementId }),
+  listLegendaryCollections: () =>
+    invoke<LegendaryCollection[]>("cmd_list_legendary_collections"),
+  getPinnedView: () => invoke<PinnedItem[]>("cmd_get_pinned_view"),
 };

@@ -1,0 +1,13 @@
+{
+  "_meta": {
+    "description": "Maps GW2 achievements to world bosses / meta events. Boss IDs match src-tauri/data/boss_schedule.json. Drives the urgency scorer: a pinned achievement linked to a boss whose spawn is imminent floats to the top. Extend by appending entries — the loader upserts on every boot.",
+    "last_verified": "2026-05-24",
+    "format_version": "1.0"
+  },
+  "links": [
+    {
+      "boss_id": "tequatl",
+      "achievement_ids": [900, 901, 902, 903, 904, 905, 906, 907, 908, 909, 910]
+    }
+  ]
+}

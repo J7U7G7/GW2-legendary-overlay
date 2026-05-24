@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "description": "Curated catalog of GW2 legendary collections. Achievement IDs verified against the live GW2 API (Legendary Trinkets / Weapons / Backpacks / Armor categories). Extend by adding entries here — the loader upserts on every boot.",
+    "last_verified": "2026-05-24",
+    "format_version": "1.0"
+  },
+  "collections": [
+    {
+      "key": "aurora",
+      "name": "Aurora",
+      "generation": "LWS3",
+      "kind": "trinket",
+      "sort_order": 10,
+      "members": [
+        { "achievement_id": 3522, "step": 1 },
+        { "achievement_id": 3489, "step": 2 }
+      ]
+    },
+    {
+      "key": "vision",
+      "name": "Vision",
+      "generation": "LWS4",
+      "kind": "trinket",
+      "sort_order": 20,
+      "members": [
+        { "achievement_id": 4762, "step": 1 },
+        { "achievement_id": 4771, "step": 2 }
+      ]
+    },
+    {
+      "key": "coalescence",
+      "name": "Coalescence",
+      "generation": "LWS4",
+      "kind": "trinket",
+      "sort_order": 30,
+      "members": [
+        { "achievement_id": 4035, "step": 1 },
+        { "achievement_id": 4412, "step": 2 },
+        { "achievement_id": 4805, "step": 3 }
+      ]
+    }
+  ]
+}

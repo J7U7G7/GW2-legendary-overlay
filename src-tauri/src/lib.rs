@@ -1,4 +1,5 @@
 pub mod api;
+pub mod catalog;
 pub mod db;
 pub mod error;
 pub mod scorer;
@@ -40,6 +41,11 @@ pub fn run() {
             commands::cmd_get_upcoming_events,
             commands::cmd_get_wizardsvault_state,
             commands::cmd_get_progress_summary,
+            commands::cmd_search_achievements,
+            commands::cmd_pin_achievement,
+            commands::cmd_unpin_achievement,
+            commands::cmd_list_legendary_collections,
+            commands::cmd_get_pinned_view,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");
@@ -62,6 +68,11 @@ pub fn run() {
                 metas = schedule.meta_events.len(),
                 "boss schedule loaded"
             );
+
+            if let Err(e) = catalog::load_all(&db) {
+                error!(error = %e, "failed to load static catalogs");
+                return Err(Box::new(e));
+            }
 
             // If a key is already stored, build the client + engine eagerly so
             // sync starts at boot. Otherwise the UI will prompt for one.

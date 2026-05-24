@@ -51,3 +51,47 @@ export type SyncReport = {
   wv_weekly: number;
   wv_special: number;
 };
+
+export type AchievementSearchResult = {
+  id: number;
+  name: string;
+  description: string | null;
+  points: number;
+  pinned: boolean;
+};
+
+export type LegendaryCollectionMember = {
+  achievement_id: number;
+  step: number;
+  name: string;
+  points: number;
+  pinned: boolean;
+  completion_ratio: number;
+  done: boolean;
+};
+
+export type LegendaryCollection = {
+  key: string;
+  name: string;
+  generation: string;
+  kind: string;
+  sort_order: number;
+  members: LegendaryCollectionMember[];
+  pinned_count: number;
+  done_count: number;
+};
+
+export type PinnedItem = {
+  id: number;
+  name: string;
+  description: string | null;
+  current: number | null;
+  max: number | null;
+  completion_ratio: number;
+  done: boolean;
+  points: number;
+  collection_key: string | null;
+  associated_boss: string | null;
+  next_event: UpcomingEvent | null;
+  score: number;
+};

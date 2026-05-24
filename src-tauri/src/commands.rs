@@ -12,6 +12,7 @@ use crate::api::client::ApiClient;
 use crate::api::endpoints::{self, TokenInfo};
 use crate::db::repository::Db;
 use crate::error::{AppError, Result};
+use crate::scorer::ranking::{Scoreable, Weights, score as score_item};
 use crate::sync::engine::SyncEngine;
 use crate::sync::{progress, wizardsvault};
 use crate::timers::engine::{UpcomingEvent, all_upcoming};
@@ -230,6 +231,299 @@ pub async fn cmd_get_progress_summary(state: State<'_, AppState>) -> Result<Prog
             points_earned,
         })
     })
+}
+
+// ============================================================================
+// Pinning + search + ranked view
+// ============================================================================
+
+#[derive(Serialize)]
+pub struct AchievementSearchResult {
+    pub id: u32,
+    pub name: String,
+    pub description: Option<String>,
+    pub points: i64,
+    pub pinned: bool,
+}
+
+#[derive(Serialize)]
+pub struct LegendaryCollectionMemberView {
+    pub achievement_id: u32,
+    pub step: i64,
+    pub name: String,
+    pub points: i64,
+    pub pinned: bool,
+    pub completion_ratio: f64,
+    pub done: bool,
+}
+
+#[derive(Serialize)]
+pub struct LegendaryCollectionView {
+    pub key: String,
+    pub name: String,
+    pub generation: String,
+    pub kind: String,
+    pub sort_order: i64,
+    pub members: Vec<LegendaryCollectionMemberView>,
+    pub pinned_count: usize,
+    pub done_count: usize,
+}
+
+#[derive(Serialize)]
+pub struct PinnedItemView {
+    pub id: u32,
+    pub name: String,
+    pub description: Option<String>,
+    pub current: Option<i64>,
+    pub max: Option<i64>,
+    pub completion_ratio: f64,
+    pub done: bool,
+    pub points: i64,
+    pub collection_key: Option<String>,
+    pub associated_boss: Option<String>,
+    pub next_event: Option<UpcomingEvent>,
+    pub score: f64,
+}
+
+#[tauri::command]
+pub async fn cmd_search_achievements(
+    state: State<'_, AppState>,
+    query: String,
+    limit: Option<u32>,
+) -> Result<Vec<AchievementSearchResult>> {
+    let q = query.trim();
+    if q.is_empty() {
+        return Ok(vec![]);
+    }
+    let like = format!("%{q}%");
+    let limit = limit.unwrap_or(30).min(100) as i64;
+    state.db.with_conn(|c| {
+        let mut stmt = c.prepare(
+            "SELECT a.id, a.name, a.description, COALESCE(a.points, 0),
+                    CASE WHEN p.achievement_id IS NULL THEN 0 ELSE 1 END
+             FROM achievements a
+             LEFT JOIN pinned_achievements p ON p.achievement_id = a.id
+             WHERE a.name LIKE ?1 COLLATE NOCASE
+             ORDER BY length(a.name), a.name
+             LIMIT ?2",
+        )?;
+        let mapped = stmt.query_map(params![like, limit], |r| {
+            Ok(AchievementSearchResult {
+                id: r.get::<_, i64>(0)? as u32,
+                name: r.get(1)?,
+                description: r.get(2)?,
+                points: r.get(3)?,
+                pinned: r.get::<_, i64>(4)? != 0,
+            })
+        })?;
+        let mut out = Vec::new();
+        for row in mapped {
+            out.push(row?);
+        }
+        Ok(out)
+    })
+}
+
+#[tauri::command]
+pub async fn cmd_pin_achievement(
+    state: State<'_, AppState>,
+    achievement_id: u32,
+    collection_key: Option<String>,
+) -> Result<()> {
+    state.db.pin_achievement(achievement_id, collection_key.as_deref())
+}
+
+#[tauri::command]
+pub async fn cmd_unpin_achievement(
+    state: State<'_, AppState>,
+    achievement_id: u32,
+) -> Result<()> {
+    state.db.unpin_achievement(achievement_id)
+}
+
+#[tauri::command]
+pub async fn cmd_list_legendary_collections(
+    state: State<'_, AppState>,
+) -> Result<Vec<LegendaryCollectionView>> {
+    state.db.with_conn(|c| {
+        let mut stmt_cols = c.prepare(
+            "SELECT key, name, generation, kind, sort_order
+             FROM legendary_collections
+             ORDER BY sort_order, name",
+        )?;
+        let collections: Vec<(String, String, String, String, i64)> = stmt_cols
+            .query_map([], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+
+        let mut out = Vec::with_capacity(collections.len());
+        for (key, name, gen, kind, order) in collections {
+            let mut stmt_mem = c.prepare(
+                "SELECT m.achievement_id, m.step, a.name, COALESCE(a.points, 0),
+                        CASE WHEN pin.achievement_id IS NULL THEN 0 ELSE 1 END,
+                        p.current, p.max, COALESCE(p.done, 0)
+                 FROM legendary_collection_members m
+                 LEFT JOIN achievements a ON a.id = m.achievement_id
+                 LEFT JOIN pinned_achievements pin ON pin.achievement_id = m.achievement_id
+                 LEFT JOIN account_progress p ON p.achievement_id = m.achievement_id
+                 WHERE m.collection_key = ?1
+                 ORDER BY m.step, m.achievement_id",
+            )?;
+            let mut members = Vec::new();
+            let mut pinned_count = 0usize;
+            let mut done_count = 0usize;
+            let mapped = stmt_mem.query_map(params![key], |r| {
+                let id: i64 = r.get(0)?;
+                let step: i64 = r.get(1)?;
+                let name: Option<String> = r.get(2)?;
+                let points: i64 = r.get(3)?;
+                let pinned: i64 = r.get(4)?;
+                let current: Option<i64> = r.get(5)?;
+                let max: Option<i64> = r.get(6)?;
+                let done: i64 = r.get(7)?;
+                Ok((id, step, name, points, pinned, current, max, done))
+            })?;
+            for row in mapped {
+                let (id, step, name, points, pinned, current, max, done) = row?;
+                if pinned != 0 {
+                    pinned_count += 1;
+                }
+                if done != 0 {
+                    done_count += 1;
+                }
+                let ratio = match (current, max) {
+                    (Some(c), Some(m)) if m > 0 => (c as f64 / m as f64).clamp(0.0, 1.0),
+                    _ => {
+                        if done != 0 {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                };
+                members.push(LegendaryCollectionMemberView {
+                    achievement_id: id as u32,
+                    step,
+                    name: name.unwrap_or_else(|| format!("Achievement #{id}")),
+                    points,
+                    pinned: pinned != 0,
+                    completion_ratio: ratio,
+                    done: done != 0,
+                });
+            }
+            out.push(LegendaryCollectionView {
+                key,
+                name,
+                generation: gen,
+                kind,
+                sort_order: order,
+                members,
+                pinned_count,
+                done_count,
+            });
+        }
+        Ok(out)
+    })
+}
+
+#[tauri::command]
+pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<Vec<PinnedItemView>> {
+    let now = chrono::Utc::now();
+    let upcoming = all_upcoming(&state.schedule, now, 240);
+    let weights = Weights::default();
+
+    let rows = state.db.with_conn(|c| {
+        let mut stmt = c.prepare(
+            "SELECT pin.achievement_id, pin.collection_key,
+                    a.name, a.description, COALESCE(a.points, 0),
+                    p.current, p.max, COALESCE(p.done, 0),
+                    md.associated_boss, md.estimated_time_minutes
+             FROM pinned_achievements pin
+             LEFT JOIN achievements a ON a.id = pin.achievement_id
+             LEFT JOIN account_progress p ON p.achievement_id = pin.achievement_id
+             LEFT JOIN achievement_metadata md ON md.achievement_id = pin.achievement_id
+             ORDER BY pin.pinned_at",
+        )?;
+        let mapped = stmt.query_map([], |r| {
+            Ok(PinnedRow {
+                id: r.get::<_, i64>(0)? as u32,
+                collection_key: r.get(1)?,
+                name: r.get::<_, Option<String>>(2)?,
+                description: r.get(3)?,
+                points: r.get(4)?,
+                current: r.get(5)?,
+                max: r.get(6)?,
+                done: r.get::<_, i64>(7)? != 0,
+                associated_boss: r.get(8)?,
+                effort_minutes: r.get::<_, Option<i64>>(9)?.unwrap_or(30) as u32,
+            })
+        })?;
+        let mut out = Vec::new();
+        for row in mapped {
+            out.push(row?);
+        }
+        Ok(out)
+    })?;
+
+    let mut scored: Vec<PinnedItemView> = rows
+        .into_iter()
+        .map(|r| {
+            let ratio = match (r.current, r.max) {
+                (Some(c), Some(m)) if m > 0 => (c as f64 / m as f64).clamp(0.0, 1.0),
+                _ => {
+                    if r.done {
+                        1.0
+                    } else {
+                        0.0
+                    }
+                }
+            };
+            let related: Vec<String> = r.associated_boss.iter().cloned().collect();
+            let scoreable = Scoreable {
+                id: r.id.to_string(),
+                completion_ratio: ratio,
+                reward_value: r.points.max(0) as u32,
+                effort_minutes: r.effort_minutes,
+                related_event_ids: related.clone(),
+            };
+            let s = score_item(&scoreable, &upcoming, &weights, now);
+            let next_event = r
+                .associated_boss
+                .as_ref()
+                .and_then(|boss| upcoming.iter().find(|e| &e.id == boss).cloned());
+            PinnedItemView {
+                id: r.id,
+                name: r.name.unwrap_or_else(|| format!("Achievement #{}", r.id)),
+                description: r.description,
+                current: r.current,
+                max: r.max,
+                completion_ratio: ratio,
+                done: r.done,
+                points: r.points,
+                collection_key: r.collection_key,
+                associated_boss: r.associated_boss,
+                next_event,
+                score: s,
+            }
+        })
+        .collect();
+
+    scored.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(scored)
+}
+
+struct PinnedRow {
+    id: u32,
+    collection_key: Option<String>,
+    name: Option<String>,
+    description: Option<String>,
+    points: i64,
+    current: Option<i64>,
+    max: Option<i64>,
+    done: bool,
+    associated_boss: Option<String>,
+    effort_minutes: u32,
 }
 
 fn read_latest_period(db: &Db, period_type: &str) -> Result<Option<WizardsVaultPeriodView>> {
