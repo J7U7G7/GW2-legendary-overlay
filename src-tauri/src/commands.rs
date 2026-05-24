@@ -3,8 +3,27 @@ use std::sync::{Arc, Mutex};
 use chrono::Utc;
 use rusqlite::params;
 use serde::Serialize;
-use tauri::State;
+use tauri::{Emitter, State};
 use tracing::info;
+
+/// Event name emitted after any pin/unpin/boss-remove so every window
+/// re-fetches its view instead of relying on its own zustand state.
+const PINNED_CHANGED_EVENT: &str = "pinned_changed";
+/// Same idea for the appearance settings — each window has its own DOM,
+/// so the originating window has to broadcast.
+const APPEARANCE_CHANGED_EVENT: &str = "appearance_changed";
+
+fn emit_pinned_changed(app: &tauri::AppHandle) {
+    if let Err(e) = app.emit(PINNED_CHANGED_EVENT, ()) {
+        tracing::warn!(error = %e, "failed to emit pinned_changed");
+    }
+}
+
+fn emit_appearance_changed(app: &tauri::AppHandle) {
+    if let Err(e) = app.emit(APPEARANCE_CHANGED_EVENT, ()) {
+        tracing::warn!(error = %e, "failed to emit appearance_changed");
+    }
+}
 
 use crate::api::auth::{ApiKey, clear_api_key, load_api_key, store_api_key};
 use crate::api::client::ApiClient;
@@ -236,7 +255,9 @@ pub async fn cmd_set_appearance(
     appearance: AppearanceSettings,
 ) -> Result<()> {
     let json = serde_json::to_string(&appearance)?;
-    state.db.set_setting(APPEARANCE_KEY, &json)
+    state.db.set_setting(APPEARANCE_KEY, &json)?;
+    emit_appearance_changed(&state.app_handle);
+    Ok(())
 }
 
 // ============================================================================
@@ -492,7 +513,9 @@ pub async fn cmd_pin_achievement(
     achievement_id: u32,
     collection_key: Option<String>,
 ) -> Result<()> {
-    state.db.pin_achievement(achievement_id, collection_key.as_deref())
+    state.db.pin_achievement(achievement_id, collection_key.as_deref())?;
+    emit_pinned_changed(&state.app_handle);
+    Ok(())
 }
 
 #[tauri::command]
@@ -500,7 +523,9 @@ pub async fn cmd_unpin_achievement(
     state: State<'_, AppState>,
     achievement_id: u32,
 ) -> Result<()> {
-    state.db.unpin_achievement(achievement_id)
+    state.db.unpin_achievement(achievement_id)?;
+    emit_pinned_changed(&state.app_handle);
+    Ok(())
 }
 
 #[tauri::command]
@@ -591,12 +616,16 @@ pub async fn cmd_list_legendary_collections(
 
 #[tauri::command]
 pub async fn cmd_pin_boss(state: State<'_, AppState>, boss_id: String) -> Result<()> {
-    state.db.pin_boss(&boss_id)
+    state.db.pin_boss(&boss_id)?;
+    emit_pinned_changed(&state.app_handle);
+    Ok(())
 }
 
 #[tauri::command]
 pub async fn cmd_unpin_boss(state: State<'_, AppState>, boss_id: String) -> Result<()> {
-    state.db.unpin_boss(&boss_id)
+    state.db.unpin_boss(&boss_id)?;
+    emit_pinned_changed(&state.app_handle);
+    Ok(())
 }
 
 /// Wipe a boss group entirely: the explicit boss pin (if any) plus every
@@ -604,7 +633,9 @@ pub async fn cmd_unpin_boss(state: State<'_, AppState>, boss_id: String) -> Resu
 /// when the user dismisses a boss card from the Pinned tab.
 #[tauri::command]
 pub async fn cmd_remove_boss_group(state: State<'_, AppState>, boss_id: String) -> Result<()> {
-    state.db.remove_boss_group(&boss_id)
+    state.db.remove_boss_group(&boss_id)?;
+    emit_pinned_changed(&state.app_handle);
+    Ok(())
 }
 
 #[tauri::command]

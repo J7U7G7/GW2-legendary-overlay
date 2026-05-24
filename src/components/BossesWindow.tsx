@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { useCollapse } from "../hooks/useCollapse";
+import { useCrossWindowSync } from "../hooks/useCrossWindowSync";
 import { useAppStore } from "../store/app";
 import { useSettingsStore } from "../store/settings";
 import { BossesView } from "./PinnedPanel";
@@ -9,7 +11,9 @@ export function BossesWindow() {
   const apiKeyStatus = useAppStore((s) => s.apiKeyStatus);
   const checkApiKey = useAppStore((s) => s.checkApiKey);
   const loadSettings = useSettingsStore((s) => s.load);
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggle: toggleCollapse } = useCollapse();
+
+  useCrossWindowSync();
 
   useEffect(() => {
     void checkApiKey();
@@ -42,7 +46,7 @@ export function BossesWindow() {
         <div className="flex items-center gap-1 px-2">
           <button
             type="button"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggleCollapse}
             className="px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
             title={collapsed ? "Expand window" : "Collapse to header bar"}
           >

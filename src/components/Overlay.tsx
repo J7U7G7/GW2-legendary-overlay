@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
+import { useCollapse } from "../hooks/useCollapse";
+import { useCrossWindowSync } from "../hooks/useCrossWindowSync";
 import { useHotkeys, HOTKEY_LABELS } from "../hooks/useHotkeys";
 import { api } from "../lib/tauri";
 import { useAppStore, type ViewKey } from "../store/app";
@@ -21,9 +23,12 @@ const TABS: TabConfig[] = [
   { id: "wv", label: "WV" },
 ];
 
-async function showWindowByLabel(label: string) {
+async function toggleWindowByLabel(label: string) {
   const w = await WebviewWindow.getByLabel(label);
-  if (w) {
+  if (!w) return;
+  if (await w.isVisible()) {
+    await w.hide();
+  } else {
     await w.show();
     await w.setFocus();
   }
@@ -45,7 +50,7 @@ export function Overlay() {
 
   const loadSettings = useSettingsStore((s) => s.load);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggle: toggleCollapse } = useCollapse();
 
   useEffect(() => {
     void checkApiKey();
@@ -53,6 +58,7 @@ export function Overlay() {
   }, [checkApiKey, loadSettings]);
 
   useHotkeys();
+  useCrossWindowSync();
 
   const hasUsableKey = apiKeyStatus !== null && apiKeyStatus.permissions_ok;
 
@@ -70,9 +76,9 @@ export function Overlay() {
         onSync={() => void triggerSync()}
         onClearKey={() => void clearApiKey()}
         onToggleSettings={() => setSettingsOpen(!settingsOpen)}
-        onShowBosses={() => void showWindowByLabel("bosses")}
-        onShowAchievements={() => void showWindowByLabel("achievements")}
-        onToggleCollapse={() => setCollapsed(!collapsed)}
+        onShowBosses={() => void toggleWindowByLabel("bosses")}
+        onShowAchievements={() => void toggleWindowByLabel("achievements")}
+        onToggleCollapse={toggleCollapse}
         onQuit={() => void api.saveStateAndQuit()}
       />
 
