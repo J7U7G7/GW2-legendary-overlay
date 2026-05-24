@@ -1,4 +1,5 @@
 pub mod api;
+pub mod builds;
 pub mod catalog;
 pub mod db;
 pub mod error;
@@ -77,6 +78,11 @@ pub fn run() {
             commands::cmd_set_notification_lead,
             commands::cmd_sync_account_items,
             commands::cmd_search_account_items,
+            commands::cmd_list_todos,
+            commands::cmd_add_todo,
+            commands::cmd_toggle_todo,
+            commands::cmd_delete_todo,
+            commands::cmd_list_builds,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

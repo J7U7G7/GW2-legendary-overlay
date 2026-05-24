@@ -1,0 +1,51 @@
+{
+  "_meta": {
+    "description": "Curated meta builds catalog. Hand-built from public sources (snowcrows.com / hardstuck.gg / discretize.eu) with attribution; live scraping is not done out of respect for those sites' robots policies. To add a build: copy its chat code in-game (Hero panel → Build template → right-click the slot → Copy Chat Code) and paste it here.",
+    "format_version": "1.0",
+    "last_updated": "2026-05-24"
+  },
+  "builds": [
+    {
+      "id": "guardian-power-dragonhunter",
+      "profession": "Guardian",
+      "elite_spec": "Dragonhunter",
+      "role": "Power DPS",
+      "name": "Power Dragonhunter",
+      "source": "Snowcrows",
+      "source_url": "https://snowcrows.com/builds/raids/guardian/power-dragonhunter",
+      "chat_code": "[&DQEgOjogPyrAEgAAvxIAALYSAAB+EgAAAAAAAAAAAAAAAAAAAAAAAAAAAA==]",
+      "gear_summary": "Berserker + Scholar runes",
+      "weapons": "Spear / Greatsword",
+      "difficulty": 2,
+      "notes": "PLACEHOLDER chat code — replace with the current Snowcrows revision before relying on it. The structured fields and the UI are fully working; only the chat code needs verification from the live source page."
+    },
+    {
+      "id": "necromancer-condi-harbinger",
+      "profession": "Necromancer",
+      "elite_spec": "Harbinger",
+      "role": "Condition DPS",
+      "name": "Condi Harbinger",
+      "source": "Snowcrows",
+      "source_url": "https://snowcrows.com/builds/raids/necromancer/condition-harbinger",
+      "chat_code": "[&DQgePzIsLT8qPysrAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==]",
+      "gear_summary": "Viper / Rune of Nightmare",
+      "weapons": "Pistol/Pistol + Scepter/Torch",
+      "difficulty": 3,
+      "notes": "PLACEHOLDER chat code — verify against snowcrows before use."
+    },
+    {
+      "id": "revenant-heal-alac-herald",
+      "profession": "Revenant",
+      "elite_spec": "Herald",
+      "role": "Heal Alacrity",
+      "name": "Heal Alacrity Herald",
+      "source": "Snowcrows",
+      "source_url": "https://snowcrows.com/builds/raids/revenant/heal-alacrity-herald",
+      "chat_code": "[&DQkDLg83HjsqLysrAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==]",
+      "gear_summary": "Harrier / Monk + Water runes",
+      "weapons": "Staff + Mace/Shield",
+      "difficulty": 2,
+      "notes": "PLACEHOLDER chat code — verify against snowcrows before use."
+    }
+  ]
+}

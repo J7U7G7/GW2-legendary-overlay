@@ -5,11 +5,13 @@ import type {
   AchievementSearchResult,
   ApiKeyStatus,
   AppearanceSettings,
+  Build,
   EventView,
   LegendaryCollection,
   PinnedView,
   ProgressSummary,
   SyncReport,
+  TodoView,
   UpcomingEvent,
   WizardsVaultState,
 } from "../types/gw2";
@@ -48,4 +50,12 @@ export const api = {
   syncAccountItems: () => invoke<number>("cmd_sync_account_items"),
   searchAccountItems: (query: string, limit = 30) =>
     invoke<AccountItemResult[]>("cmd_search_account_items", { query, limit }),
+  listTodos: (period: "daily" | "weekly") =>
+    invoke<TodoView[]>("cmd_list_todos", { period }),
+  addTodo: (text: string, period: "daily" | "weekly") =>
+    invoke<number>("cmd_add_todo", { text, period }),
+  toggleTodo: (id: number) => invoke<void>("cmd_toggle_todo", { id }),
+  deleteTodo: (id: number) => invoke<void>("cmd_delete_todo", { id }),
+  listBuilds: (profession?: string) =>
+    invoke<Build[]>("cmd_list_builds", { profession: profession ?? null }),
 };

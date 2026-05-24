@@ -9,11 +9,13 @@ import { api } from "../lib/tauri";
 import { useAppStore, type ViewKey } from "../store/app";
 import { useSettingsStore } from "../store/settings";
 import { ApiKeySetup } from "./ApiKeySetup";
+import { BuildsView } from "./BuildsView";
 import { CatalogView } from "./CatalogView";
 import { EventsTab } from "./EventsTab";
 import { MyItemsView } from "./MyItemsView";
 import { SearchView } from "./SearchView";
 import { SettingsPanel } from "./SettingsPanel";
+import { TodosView } from "./TodosView";
 import { WizardsVaultPanel } from "./WizardsVaultPanel";
 
 type TabConfig = { id: ViewKey; label: string };
@@ -22,6 +24,8 @@ const TABS: TabConfig[] = [
   { id: "catalog", label: "Catalog" },
   { id: "search", label: "Search" },
   { id: "items", label: "Items" },
+  { id: "todos", label: "Todos" },
+  { id: "builds", label: "Builds" },
   { id: "wv", label: "WV" },
 ];
 
@@ -96,6 +100,8 @@ export function Overlay() {
             {view === "catalog" && <CatalogView />}
             {view === "search" && <SearchView />}
             {view === "items" && <MyItemsView />}
+            {view === "todos" && <TodosView />}
+            {view === "builds" && <BuildsView />}
             {view === "wv" && (
               <div className="flex-1 overflow-y-auto py-1">
                 <WizardsVaultPanel label="Daily" period={wv?.daily ?? null} />

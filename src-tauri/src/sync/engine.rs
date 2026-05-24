@@ -12,7 +12,7 @@ use tracing::{error, info, warn};
 
 use crate::api::client::ApiClient;
 use crate::db::repository::Db;
-use crate::sync::{achievements, progress, wizardsvault};
+use crate::sync::{achievements, inventory, progress, wizardsvault};
 use crate::timers::engine::{current_meta_phase, next_spawn};
 use crate::timers::schedule::Schedule;
 
@@ -22,6 +22,9 @@ type NotifiedSet = HashSet<(String, chrono::DateTime<Utc>)>;
 const PROGRESS_INTERVAL: Duration = Duration::from_secs(300);
 /// How often each WV period (daily / weekly / special) is re-pulled.
 const WIZARDSVAULT_INTERVAL: Duration = Duration::from_secs(900);
+/// How often the account-wide item inventory (bank, materials, characters,
+/// shared) is re-synced. Heavier endpoints — keep the cadence modest.
+const INVENTORY_INTERVAL: Duration = Duration::from_secs(1800);
 /// Re-run the bulk achievement definitions sync if older than this many days.
 const ACHIEVEMENTS_STALE_DAYS: i64 = 7;
 /// Cadence for the boss-watcher tick (notifies when a pinned boss is about
@@ -83,8 +86,32 @@ impl SyncEngine {
             self.spawn_achievements_bootstrap(),
             self.spawn_progress_loop(),
             self.spawn_wizardsvault_loop(),
+            self.spawn_inventory_loop(),
             self.spawn_boss_watcher_loop(),
         ]
+    }
+
+    fn spawn_inventory_loop(&self) -> JoinHandle<()> {
+        let client = Arc::clone(&self.client);
+        let db = Arc::clone(&self.db);
+        let token = self.token.clone();
+        spawn(async move {
+            let mut tick = interval(INVENTORY_INTERVAL);
+            tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
+            loop {
+                tokio::select! {
+                    _ = token.cancelled() => {
+                        info!("inventory loop stopped");
+                        return;
+                    }
+                    _ = tick.tick() => {
+                        if let Err(e) = inventory::sync_account_items(&client, &db).await {
+                            error!(error = %e, "inventory sync failed");
+                        }
+                    }
+                }
+            }
+        })
     }
 
     pub fn shutdown(&self) {

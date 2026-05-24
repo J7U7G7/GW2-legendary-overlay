@@ -46,6 +46,28 @@ export type ProgressSummary = {
   points_earned: number;
 };
 
+export type Build = {
+  id: string;
+  profession: string;
+  elite_spec: string | null;
+  role: string;
+  name: string;
+  source: string;
+  source_url: string;
+  chat_code: string;
+  gear_summary: string | null;
+  weapons: string | null;
+  difficulty: number | null;
+  notes: string | null;
+};
+
+export type TodoView = {
+  id: number;
+  text: string;
+  period: "daily" | "weekly";
+  completed: boolean;
+};
+
 export type AccountItemLocation = {
   location: string;
   location_detail: string | null;

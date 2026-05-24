@@ -211,6 +211,131 @@ pub async fn cmd_save_state_and_quit(app: tauri::AppHandle) -> Result<()> {
 }
 
 // ============================================================================
+// Builds Manager (static curated catalog from data/builds.json)
+// ============================================================================
+
+#[tauri::command]
+pub async fn cmd_list_builds(profession: Option<String>) -> Result<Vec<crate::builds::Build>> {
+    let all = crate::builds::load_all()?;
+    Ok(match profession {
+        Some(p) => all
+            .into_iter()
+            .filter(|b| b.profession.eq_ignore_ascii_case(&p))
+            .collect(),
+        None => all,
+    })
+}
+
+// ============================================================================
+// Todos (daily / weekly with automatic reset)
+// ============================================================================
+
+#[derive(Serialize)]
+pub struct TodoView {
+    pub id: i64,
+    pub text: String,
+    pub period: String,
+    pub completed: bool,
+}
+
+fn todo_period_start(period: &str, now: chrono::DateTime<chrono::Utc>) -> String {
+    use crate::sync::wizardsvault::{daily_period_start, weekly_period_start};
+    let date = match period {
+        "weekly" => weekly_period_start(now),
+        _ => daily_period_start(now),
+    };
+    date.format("%Y-%m-%d").to_string()
+}
+
+fn reset_stale_todos(db: &Db, period: &str) -> Result<()> {
+    let current = todo_period_start(period, chrono::Utc::now());
+    db.with_conn(|c| {
+        c.execute(
+            "UPDATE todos
+             SET completed_at = NULL, period_start = ?1
+             WHERE period = ?2 AND period_start < ?1",
+            params![current, period],
+        )?;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+pub async fn cmd_list_todos(state: State<'_, AppState>, period: String) -> Result<Vec<TodoView>> {
+    reset_stale_todos(&state.db, &period)?;
+    state.db.with_conn(|c| {
+        let mut stmt = c.prepare(
+            "SELECT id, text, period, completed_at
+             FROM todos
+             WHERE period = ?1
+             ORDER BY id",
+        )?;
+        let rows = stmt.query_map(params![period], |r| {
+            let completed_at: Option<String> = r.get(3)?;
+            Ok(TodoView {
+                id: r.get(0)?,
+                text: r.get(1)?,
+                period: r.get(2)?,
+                completed: completed_at.is_some(),
+            })
+        })?;
+        let mut out = Vec::new();
+        for row in rows {
+            out.push(row?);
+        }
+        Ok(out)
+    })
+}
+
+#[tauri::command]
+pub async fn cmd_add_todo(
+    state: State<'_, AppState>,
+    text: String,
+    period: String,
+) -> Result<i64> {
+    let text = text.trim();
+    if text.is_empty() {
+        return Err(AppError::Other("todo text cannot be empty".into()));
+    }
+    if period != "daily" && period != "weekly" {
+        return Err(AppError::Other("period must be 'daily' or 'weekly'".into()));
+    }
+    let start = todo_period_start(&period, chrono::Utc::now());
+    state.db.with_conn(|c| {
+        c.execute(
+            "INSERT INTO todos (text, period, period_start) VALUES (?1, ?2, ?3)",
+            params![text, &period, start],
+        )?;
+        Ok(c.last_insert_rowid())
+    })
+}
+
+#[tauri::command]
+pub async fn cmd_toggle_todo(state: State<'_, AppState>, id: i64) -> Result<()> {
+    state.db.with_conn(|c| {
+        // Flip completed_at: NULL → now, set → NULL.
+        c.execute(
+            "UPDATE todos
+             SET completed_at = CASE
+                WHEN completed_at IS NULL THEN CURRENT_TIMESTAMP
+                ELSE NULL
+             END
+             WHERE id = ?1",
+            params![id],
+        )?;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+pub async fn cmd_delete_todo(state: State<'_, AppState>, id: i64) -> Result<()> {
+    state.db.with_conn(|c| {
+        c.execute("DELETE FROM todos WHERE id = ?1", params![id])?;
+        Ok(())
+    })
+}
+
+// ============================================================================
 // Account inventory search (bank / materials / characters / shared)
 // ============================================================================
 

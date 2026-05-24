@@ -14,6 +14,8 @@ const MIGRATIONS: &[&str] = &[
     ITEMS_CACHE_SCHEMA,
     // v5: account-wide item inventory (bank, materials, characters, shared)
     ACCOUNT_ITEMS_SCHEMA,
+    // v6: custom daily/weekly todos
+    TODOS_SCHEMA,
 ];
 
 const INITIAL_SCHEMA: &str = r#"
@@ -144,6 +146,18 @@ const ACCOUNT_ITEMS_SCHEMA: &str = r#"
     CREATE INDEX idx_account_items_location ON account_items(location);
 "#;
 
+const TODOS_SCHEMA: &str = r#"
+    CREATE TABLE todos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        text TEXT NOT NULL,
+        period TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        completed_at TEXT,
+        period_start TEXT NOT NULL
+    );
+    CREATE INDEX idx_todos_period ON todos(period);
+"#;
+
 pub fn migrate(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS _migrations (
@@ -201,6 +215,7 @@ mod tests {
             "pinned_achievements",
             "pinned_bosses",
             "settings",
+            "todos",
             "wizardsvault",
         ] {
             assert!(t.contains(&expected.to_string()), "missing table {expected}; got {t:?}");
