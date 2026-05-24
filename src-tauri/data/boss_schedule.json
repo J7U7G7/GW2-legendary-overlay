@@ -378,6 +378,7 @@
       "name": "Palawadan",
       "expansion": "PoF",
       "map": "Domain of Istan",
+      "waypoint_code": "[&BBoLAAA=]",
       "cycle_minutes": 120,
       "anchor_utc": "01:45",
       "phases": [
@@ -425,6 +426,7 @@
       "name": "Forged with Fire / Serpents' Ire",
       "expansion": "PoF",
       "map": "Domain of Vabbi",
+      "waypoint_code": "[&BEoKAAA=]",
       "cycle_minutes": 60,
       "anchor_utc": "00:00",
       "phases": [

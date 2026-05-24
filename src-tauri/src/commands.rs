@@ -294,6 +294,10 @@ pub struct PinnedBitView {
     pub ref_id: Option<i64>,
     pub text: Option<String>,
     pub done: bool,
+    /// Resolved name for Item-typed bits (looked up in items_cache).
+    pub resolved_name: Option<String>,
+    pub resolved_description: Option<String>,
+    pub resolved_rarity: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -722,6 +726,7 @@ fn load_pinned_achievement_views(
     weights: &Weights,
     now: chrono::DateTime<chrono::Utc>,
 ) -> Result<Vec<PinnedItemView>> {
+    let item_cache = load_item_cache_for_pinned(db)?;
     let rows = db.with_conn(|c| {
         let mut stmt = c.prepare(
             "SELECT pin.achievement_id, pin.collection_key,
@@ -785,7 +790,7 @@ fn load_pinned_achievement_views(
                 .associated_boss
                 .as_ref()
                 .and_then(|boss| upcoming.iter().find(|e| &e.id == boss).cloned());
-            let bits = parse_bits(&r.bits_def_json, &r.bits_done_json);
+            let bits = parse_bits(&r.bits_def_json, &r.bits_done_json, &item_cache);
             PinnedItemView {
                 id: r.id,
                 name: r.name.unwrap_or_else(|| format!("Achievement #{}", r.id)),
@@ -807,10 +812,60 @@ fn load_pinned_achievement_views(
     Ok(items)
 }
 
+/// Collect every Item id referenced by a pinned achievement's bits and
+/// pull its cached entry. Returns the lookup table consumed by `parse_bits`.
+fn load_item_cache_for_pinned(
+    db: &Db,
+) -> Result<std::collections::HashMap<u32, crate::sync::items::CachedItem>> {
+    let ids = db.with_conn(|c| {
+        let mut stmt = c.prepare(
+            "SELECT a.bits FROM pinned_achievements pin
+             JOIN achievements a ON a.id = pin.achievement_id
+             WHERE a.bits IS NOT NULL",
+        )?;
+        let mut rows = stmt.query([])?;
+        let mut ids: std::collections::HashSet<u32> = std::collections::HashSet::new();
+        while let Some(row) = rows.next()? {
+            let s: String = row.get(0)?;
+            if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(&s) {
+                for bit in arr {
+                    let kind = bit.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                    if kind == "Item" {
+                        if let Some(id) = bit.get("id").and_then(|v| v.as_u64()) {
+                            ids.insert(id as u32);
+                        }
+                    }
+                }
+            }
+        }
+        Ok(ids.into_iter().collect::<Vec<_>>())
+    })?;
+    crate::sync::items::lookup_items(db, &ids)
+}
+
+/// Fetch any Item-typed bit referenced by pinned achievements that we don't
+/// yet have in the items cache. Called by the frontend after a pin/unpin so
+/// the next get_pinned_view shows real item names instead of `Item #X`.
+#[tauri::command]
+pub async fn cmd_warm_item_cache(state: State<'_, AppState>) -> Result<usize> {
+    let missing = crate::sync::items::find_missing_item_ids(&state.db)?;
+    if missing.is_empty() {
+        return Ok(0);
+    }
+    let key = load_api_key(&state.db)?.ok_or(AppError::NoApiKey)?;
+    let client = ApiClient::new(Some(key))?;
+    crate::sync::items::fetch_and_cache_items(&client, &state.db, &missing).await
+}
+
 /// Parse the cached `achievements.bits` JSON array against the user's
 /// `account_progress.bits` (list of completed indices) and return a flat
-/// view ready for the UI.
-fn parse_bits(def_json: &Option<String>, done_json: &Option<String>) -> Vec<PinnedBitView> {
+/// view ready for the UI. `item_cache` is consulted to resolve Item-typed
+/// bits to human-readable names.
+fn parse_bits(
+    def_json: &Option<String>,
+    done_json: &Option<String>,
+    item_cache: &std::collections::HashMap<u32, crate::sync::items::CachedItem>,
+) -> Vec<PinnedBitView> {
     let Some(def_str) = def_json else { return vec![] };
     let defs: Vec<serde_json::Value> = match serde_json::from_str(def_str) {
         Ok(v) => v,
@@ -835,13 +890,32 @@ fn parse_bits(def_json: &Option<String>, done_json: &Option<String>) -> Vec<Pinn
             let text = bit
                 .get("text")
                 .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
                 .map(|s| s.to_string());
+            let (resolved_name, resolved_description, resolved_rarity) =
+                if kind == "Item" {
+                    ref_id
+                        .and_then(|id| item_cache.get(&(id as u32)))
+                        .map(|it| {
+                            (
+                                Some(it.name.clone()),
+                                it.description.clone(),
+                                it.rarity.clone(),
+                            )
+                        })
+                        .unwrap_or((None, None, None))
+                } else {
+                    (None, None, None)
+                };
             PinnedBitView {
                 index: idx as u32,
                 kind,
                 ref_id,
                 text,
                 done: done_set.contains(&(idx as u32)),
+                resolved_name,
+                resolved_description,
+                resolved_rarity,
             }
         })
         .collect()

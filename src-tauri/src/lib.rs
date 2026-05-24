@@ -50,6 +50,7 @@ pub fn run() {
             commands::cmd_unpin_boss,
             commands::cmd_remove_boss_group,
             commands::cmd_list_events,
+            commands::cmd_warm_item_cache,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

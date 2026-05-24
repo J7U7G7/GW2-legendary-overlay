@@ -10,6 +10,8 @@ const MIGRATIONS: &[&str] = &[
     PIN_SCHEMA,
     // v3: world boss pinning (separate from achievement pinning)
     PIN_BOSS_SCHEMA,
+    // v4: items cache (resolves Item-typed bits to human-readable names)
+    ITEMS_CACHE_SCHEMA,
 ];
 
 const INITIAL_SCHEMA: &str = r#"
@@ -115,6 +117,18 @@ const PIN_BOSS_SCHEMA: &str = r#"
     );
 "#;
 
+const ITEMS_CACHE_SCHEMA: &str = r#"
+    CREATE TABLE items_cache (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT,
+        rarity TEXT,
+        icon TEXT,
+        description TEXT,
+        last_synced TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+"#;
+
 pub fn migrate(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS _migrations (
@@ -165,6 +179,7 @@ mod tests {
             "achievement_metadata",
             "achievements",
             "daily_assignments",
+            "items_cache",
             "legendary_collection_members",
             "legendary_collections",
             "pinned_achievements",

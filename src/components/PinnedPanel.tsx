@@ -7,29 +7,58 @@ function wikiUrl(query: string) {
   return `https://wiki.guildwars2.com/wiki/Special:Search?search=${encodeURIComponent(query)}`;
 }
 
-function BitRow({ bit }: { bit: PinnedBit }) {
-  const label =
-    bit.text ??
-    (bit.ref_id !== null ? `${bit.kind} #${bit.ref_id}` : `${bit.kind}`);
-  const wikiQuery =
-    bit.ref_id !== null && bit.kind !== "Text" ? `${bit.kind}:${bit.ref_id}` : bit.text ?? null;
+function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
+  const hasText = bit.text !== null && bit.text.trim().length > 0;
+  const primaryLabel =
+    bit.resolved_name ??
+    (hasText
+      ? bit.text!
+      : bit.ref_id !== null
+        ? `${bit.kind} #${bit.ref_id}`
+        : bit.kind);
+  // Sub-line: the in-game "how to get it" text plus the API item description.
+  const subLines: string[] = [];
+  if (hasText && bit.text !== bit.resolved_name) subLines.push(bit.text!);
+  if (bit.resolved_description && bit.resolved_description.trim().length > 0) {
+    subLines.push(bit.resolved_description);
+  }
+  const wikiQuery = bit.resolved_name
+    ? bit.resolved_name
+    : bit.ref_id !== null && bit.kind !== "Text"
+      ? `${bit.kind}:${bit.ref_id}`
+      : hasText
+        ? bit.text
+        : null;
+  const rowClass = bit.done
+    ? "opacity-40"
+    : urgent
+      ? "bg-amber-400/10 border-l-2 border-amber-300"
+      : "opacity-90 border-l-2 border-transparent";
   return (
-    <li
-      className={`pl-9 pr-3 py-0.5 flex items-start gap-1.5 text-[10px] ${bit.done ? "opacity-40" : "opacity-90"}`}
-    >
+    <li className={`pl-9 pr-3 py-0.5 flex items-start gap-1.5 text-[10px] ${rowClass}`}>
       <span
         className={
           bit.done
             ? "text-[var(--accent-color)] mt-0.5"
-            : "opacity-50 mt-0.5"
+            : urgent
+              ? "text-amber-300 mt-0.5"
+              : "opacity-50 mt-0.5"
         }
       >
         {bit.done ? "✓" : "○"}
       </span>
-      <span className={`flex-1 leading-tight ${bit.done ? "line-through" : ""}`}>{label}</span>
+      <div className="flex-1 leading-tight min-w-0">
+        <div className={bit.done ? "line-through" : ""}>{primaryLabel}</div>
+        {!bit.done &&
+          subLines.map((line, i) => (
+            <div key={i} className="opacity-60 text-[10px] mt-px">
+              {line}
+            </div>
+          ))}
+      </div>
       {wikiQuery && (
         <a
-          className="opacity-50 hover:opacity-100 text-[10px]"
+          className="opacity-50 hover:opacity-100 text-[10px] mt-0.5"
           href={wikiUrl(wikiQuery)}
           target="_blank"
           rel="noreferrer"
@@ -110,7 +139,13 @@ function WaypointButton({ code, name }: { code: string | null; name?: string }) 
   );
 }
 
-function AchievementRow({ item }: { item: PinnedItem }) {
+function AchievementRow({
+  item,
+  bossImminent = false,
+}: {
+  item: PinnedItem;
+  bossImminent?: boolean;
+}) {
   const unpin = useAppStore((s) => s.unpin);
   const [open, setOpen] = useState(false);
   const ratio = item.completion_ratio;
@@ -175,7 +210,7 @@ function AchievementRow({ item }: { item: PinnedItem }) {
           {item.bits.length > 0 && (
             <ul className="pb-1">
               {item.bits.map((bit) => (
-                <BitRow key={bit.index} bit={bit} />
+                <BitRow key={bit.index} bit={bit} urgent={bossImminent && !bit.done} />
               ))}
             </ul>
           )}
@@ -260,7 +295,7 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
             .slice()
             .sort((a, b) => Number(a.done) - Number(b.done))
             .map((item) => (
-              <AchievementRow key={item.id} item={item} />
+              <AchievementRow key={item.id} item={item} bossImminent={isSoon || isImminent} />
             ))}
         </ul>
       )}

@@ -88,6 +88,9 @@ export type PinnedBit = {
   ref_id: number | null;
   text: string | null;
   done: boolean;
+  resolved_name: string | null;
+  resolved_description: string | null;
+  resolved_rarity: string | null;
 };
 
 export type PinnedItem = {

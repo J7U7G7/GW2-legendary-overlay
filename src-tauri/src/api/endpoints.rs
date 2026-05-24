@@ -155,6 +155,29 @@ pub async fn get_achievements_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<Ac
     c.get_json(&format!("/v2/achievements?ids={ids_csv}")).await
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ItemDetail {
+    pub id: u32,
+    pub name: String,
+    #[serde(default, rename = "type")]
+    pub kind: Option<String>,
+    #[serde(default)]
+    pub rarity: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+#[allow(dead_code)]
+pub async fn get_items_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<ItemDetail>> {
+    if ids.is_empty() {
+        return Ok(vec![]);
+    }
+    let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+    c.get_json(&format!("/v2/items?ids={ids_csv}")).await
+}
+
 #[allow(dead_code)]
 pub async fn get_wizardsvault_daily(c: &ApiClient) -> Result<WizardsVaultPeriod> {
     c.get_json("/v2/account/wizardsvault/daily").await

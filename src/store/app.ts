@@ -172,6 +172,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
     await api.pinAchievement(id, collectionKey);
     await get().refresh();
     if (get().searchQuery.length > 0) await get().runSearch();
+    // Fetch any new item names referenced by this pin so the next
+    // refresh resolves them; ignore failures (the UI falls back to ids).
+    try {
+      const fetched = await api.warmItemCache();
+      if (fetched > 0) await get().refresh();
+    } catch {
+      // ignore
+    }
   },
 
   async unpin(id) {
