@@ -14,6 +14,7 @@ export type UpcomingEvent = {
   kind: "world_boss" | "meta_phase";
   start_at: string; // ISO 8601 UTC
   duration_minutes: number;
+  waypoint_code: string | null;
 };
 
 export type WizardsVaultObjective = {

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useAppStore } from "../store/app";
-import type { PinnedItem } from "../types/gw2";
+import type { PinnedItem, UpcomingEvent } from "../types/gw2";
 
 function formatCountdown(targetIso: string, now: number): string {
   const diff = new Date(targetIso).getTime() - now;
@@ -24,9 +24,32 @@ function ProgressBar({ ratio }: { ratio: number }) {
   );
 }
 
+function WaypointButton({ event }: { event: UpcomingEvent }) {
+  const [copied, setCopied] = useState(false);
+  if (!event.waypoint_code) return null;
+  const onClick = async () => {
+    try {
+      await navigator.clipboard.writeText(event.waypoint_code!);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // ignore
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="px-1 py-0.5 text-[10px] rounded bg-white/10 hover:bg-white/20 font-mono"
+      title="Copy waypoint code to clipboard"
+    >
+      {copied ? "✓ copied" : "📋 WP"}
+    </button>
+  );
+}
+
 function PinnedItemRow({ item, now }: { item: PinnedItem; now: number }) {
   const unpin = useAppStore((s) => s.unpin);
-  const isUrgent = item.score >= 50;
   const ratio = item.completion_ratio;
   const ratioLabel =
     item.current !== null && item.max !== null && item.max > 0
@@ -35,17 +58,27 @@ function PinnedItemRow({ item, now }: { item: PinnedItem; now: number }) {
         ? "done"
         : "0%";
 
+  const mins = item.next_event
+    ? Math.max(0, Math.floor((new Date(item.next_event.start_at).getTime() - now) / 60000))
+    : null;
+  const urgentBand =
+    !item.done && mins !== null && mins <= 10
+      ? "bg-amber-400/20 border-l-2 border-amber-300"
+      : !item.done && item.score >= 50
+        ? "bg-amber-400/10 border-l-2 border-amber-300/50"
+        : "border-l-2 border-transparent";
+
+  const nameClass = item.done ? "opacity-40" : "opacity-95";
+
   return (
-    <li
-      className={`px-3 py-1.5 border-b border-white/5 ${isUrgent ? "bg-amber-400/5" : ""}`}
-    >
+    <li className={`px-3 py-1.5 border-b border-white/5 ${urgentBand}`}>
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span
               className={
                 item.done
-                  ? "text-[var(--accent-color)]"
+                  ? "text-[var(--accent-color)] opacity-50"
                   : ratio > 0
                     ? "text-amber-300"
                     : "opacity-60"
@@ -53,22 +86,25 @@ function PinnedItemRow({ item, now }: { item: PinnedItem; now: number }) {
             >
               {item.done ? "✓" : ratio > 0 ? "◐" : "○"}
             </span>
-            <span
-              className={
-                item.done ? "opacity-50 line-through truncate" : "opacity-95 truncate"
-              }
-              title={item.name}
-            >
+            <span className={`${nameClass} truncate`} title={item.name}>
               {item.name}
             </span>
           </div>
-          {item.next_event && (
-            <div className="ml-5 text-[10px] opacity-70 flex items-center gap-1">
-              <span className={isUrgent ? "text-amber-300 font-semibold" : ""}>
+          {item.next_event && !item.done && (
+            <div className="ml-5 mt-0.5 text-[11px] flex items-center gap-1.5 flex-wrap">
+              <span
+                className={
+                  mins !== null && mins <= 10
+                    ? "text-amber-300 font-semibold"
+                    : "text-amber-200/80"
+                }
+              >
                 ⏰ {item.next_event.name}
               </span>
-              <span className="font-mono">in {formatCountdown(item.next_event.start_at, now)}</span>
-              <span className="opacity-60">· 📍 {item.next_event.map}</span>
+              <span className="font-mono opacity-80">in {formatCountdown(item.next_event.start_at, now)}</span>
+              <span className="opacity-50">·</span>
+              <span className="opacity-70 truncate">📍 {item.next_event.map}</span>
+              <WaypointButton event={item.next_event} />
             </div>
           )}
         </div>
@@ -84,7 +120,7 @@ function PinnedItemRow({ item, now }: { item: PinnedItem; now: number }) {
           </button>
         </div>
       </div>
-      {!item.done && item.max && item.max > 0 && (
+      {!item.done && item.max !== null && item.max > 0 && (
         <div className="ml-5 mt-1">
           <ProgressBar ratio={ratio} />
         </div>
@@ -102,6 +138,13 @@ export function PinnedPanel() {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
+
+  // Sort: active (not done) items by score desc first, then done items at the bottom.
+  const sorted = useMemo(() => {
+    const active = pinned.filter((p) => !p.done);
+    const done = pinned.filter((p) => p.done);
+    return [...active, ...done];
+  }, [pinned]);
 
   if (pinned.length === 0) {
     return (
@@ -129,7 +172,7 @@ export function PinnedPanel() {
 
   return (
     <ul className="flex-1 overflow-y-auto">
-      {pinned.map((item) => (
+      {sorted.map((item) => (
         <PinnedItemRow key={item.id} item={item} now={now} />
       ))}
     </ul>

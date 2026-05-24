@@ -110,6 +110,7 @@ pub struct UpcomingEvent {
     pub kind: UpcomingKind,
     pub start_at: DateTime<Utc>,
     pub duration_minutes: u32,
+    pub waypoint_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -133,6 +134,7 @@ pub fn all_upcoming(schedule: &Schedule, now: DateTime<Utc>, horizon_minutes: i6
                 kind: UpcomingKind::WorldBoss,
                 start_at: t,
                 duration_minutes: boss.duration_minutes,
+                waypoint_code: boss.waypoint_code.clone(),
             });
         }
     }
@@ -153,6 +155,7 @@ pub fn all_upcoming(schedule: &Schedule, now: DateTime<Utc>, horizon_minutes: i6
                 kind: UpcomingKind::MetaPhase,
                 start_at: instant.next.starts_at,
                 duration_minutes: next_phase_dur,
+                waypoint_code: None,
             });
         }
     }
@@ -189,7 +192,7 @@ mod tests {
             tier: None,
             map: "Test Map".into(),
             area: None,
-            waypoint_code: None,
+            waypoint_code: Some("[&AAAAAAAA=]".into()),
             schedule_utc: times.iter().map(|s| (*s).to_string()).collect(),
             duration_minutes: 15,
             wiki_event: None,

@@ -8,7 +8,6 @@ export function SearchView() {
   const runSearch = useAppStore((s) => s.runSearch);
   const results = useAppStore((s) => s.searchResults);
   const pin = useAppStore((s) => s.pin);
-  const unpin = useAppStore((s) => s.unpin);
 
   // Debounced search
   useEffect(() => {
@@ -50,17 +49,22 @@ export function SearchView() {
                 </div>
               )}
             </div>
-            <button
-              type="button"
-              onClick={() => (r.pinned ? void unpin(r.id) : void pin(r.id, null))}
-              className={
-                r.pinned
-                  ? "px-2 py-0.5 text-[10px] bg-[var(--accent-color)] text-black rounded"
-                  : "px-2 py-0.5 text-[10px] bg-white/10 hover:bg-white/20 rounded"
-              }
-            >
-              {r.pinned ? "Pinned ✓" : "+ Pin"}
-            </button>
+            {r.pinned ? (
+              <span
+                className="px-2 py-0.5 text-[10px] text-[var(--accent-color)] cursor-default"
+                title="Already pinned. Unpin from the Pinned tab."
+              >
+                ✓ Pinned
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void pin(r.id, null)}
+                className="px-2 py-0.5 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+              >
+                + Pin
+              </button>
+            )}
           </li>
         ))}
       </ul>

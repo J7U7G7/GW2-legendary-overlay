@@ -136,6 +136,7 @@ mod tests {
             kind: UpcomingKind::WorldBoss,
             start_at: now() + Duration::minutes(start_minutes_from_now),
             duration_minutes: duration,
+            waypoint_code: None,
         }
     }
 

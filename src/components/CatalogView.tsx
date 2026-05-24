@@ -6,7 +6,6 @@ import type { LegendaryCollection } from "../types/gw2";
 function CollectionCard({ collection }: { collection: LegendaryCollection }) {
   const [open, setOpen] = useState(false);
   const pin = useAppStore((s) => s.pin);
-  const unpin = useAppStore((s) => s.unpin);
 
   const total = collection.members.length;
   return (
@@ -54,19 +53,22 @@ function CollectionCard({ collection }: { collection: LegendaryCollection }) {
                   {m.name}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() =>
-                  m.pinned ? void unpin(m.achievement_id) : void pin(m.achievement_id, collection.key)
-                }
-                className={
-                  m.pinned
-                    ? "px-1.5 py-0.5 text-[10px] bg-[var(--accent-color)] text-black rounded"
-                    : "px-1.5 py-0.5 text-[10px] bg-white/10 hover:bg-white/20 rounded"
-                }
-              >
-                {m.pinned ? "✓" : "+"}
-              </button>
+              {m.pinned ? (
+                <span
+                  className="px-1.5 py-0.5 text-[10px] text-[var(--accent-color)] cursor-default"
+                  title="Already pinned. Unpin from the Pinned tab."
+                >
+                  ✓ Pinned
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void pin(m.achievement_id, collection.key)}
+                  className="px-1.5 py-0.5 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+                >
+                  + Pin
+                </button>
+              )}
             </li>
           ))}
         </ul>

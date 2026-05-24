@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { useAppStore, type ViewKey } from "../store/app";
 import { ApiKeySetup } from "./ApiKeySetup";
@@ -82,11 +83,22 @@ function Header(props: {
   onSync: () => void;
   onClearKey: () => void;
 }) {
-  // The empty space is the drag region; the title is wrapped in a draggable span.
-  // Buttons sit outside any drag-region attribute so clicks fire normally.
+  // Use the JS API explicitly because Tauri 2's data-tauri-drag-region
+  // attribute injection didn't trigger drag on this user's environment.
+  const onMouseDown = (e: React.MouseEvent) => {
+    if (e.buttons === 1 && (e.target as HTMLElement).closest("[data-drag]")) {
+      e.preventDefault();
+      void getCurrentWindow().startDragging();
+    }
+  };
+
   return (
-    <header className="flex items-center justify-between border-b border-white/10 shrink-0 select-none">
+    <header
+      className="flex items-center justify-between border-b border-white/10 shrink-0"
+      onMouseDown={onMouseDown}
+    >
       <div
+        data-drag="1"
         data-tauri-drag-region
         className="flex-1 px-3 py-1.5 text-xs font-semibold cursor-grab active:cursor-grabbing"
       >
