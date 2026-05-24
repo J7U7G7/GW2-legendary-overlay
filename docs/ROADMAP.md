@@ -1,176 +1,147 @@
 # Roadmap
 
-What's planned but not yet built. Items are grouped by scope. The order
-inside a section is rough priority but not a strict commitment — pick
-based on user feedback.
+What's done, in progress, and planned. Items are grouped by status.
 
-## Active backlog (user-requested, scoped)
+## Shipped
 
-### 3-window split
+### Phase 1 (spec)
+- ✅ Transparent always-on-top overlay
+- ✅ DPAPI-encrypted API key storage
+- ✅ Token-bucket rate limiter (300 req/min, exp. backoff on 429/5xx)
+- ✅ Periodic sync (progress 5 min / WV 15 min / inventory 30 min)
+- ✅ Boss timer engine (next_spawn / current_meta_phase / prev_spawn)
+- ✅ Weighted urgency scorer
+- ✅ Settings panel (opacity, accent / text / bg colors, scale)
+- ✅ Window position + size persisted between launches
+- ✅ Click-through toggle + global hotkeys (Ctrl+Shift+G/H/B/P)
 
-Currently the overlay is two windows: **main** (tabs Pinned / Catalog
-/ Search / WV) and **events** (the boss + meta feed in its own
-movable window).
+### Phase 2 (initial scope)
+- ✅ Pinning architecture: `pinned_achievements` + `pinned_bosses`
+- ✅ Boss-first pinning with collapsible linked achievements
+- ✅ Curated legendary catalog — 32 collections
+- ✅ Catalog grouped by generation + kind filter
+- ✅ Recipe link per collection (opens wiki page)
+- ✅ Achievement search across the cached definition set
+- ✅ Per-bit detail expansion (description, requirement, items with
+  resolved French names)
+- ✅ Urgency inheritance — bits inside an achievement linked to a boss
+  spawning in the next 10 min get an orange band
+- ✅ Three-window split (main / bosses / achievements) with per-window
+  collapse-to-strip
+- ✅ Cross-window event sync (`pinned_changed`, `appearance_changed`)
+- ✅ Windows toast notifications for pinned bosses + meta events
+  (configurable lead time 1–15 min, test-notification button)
+- ✅ Account-wide item search across bank, materials, shared
+  inventory, every character's bags AND equipped slots; results in
+  French
+- ✅ Daily / weekly todos with automatic reset (00:00 UTC daily,
+  Mondays 07:30 UTC weekly)
+- ✅ Builds Manager infra — static JSON catalog + UI + copy-to-chat-
+  code button. Real chat codes to be filled by the curator.
 
-The next iteration splits the Pinned tab into two more windows so the
-user can lay them out independently:
+## Backlog — scoped, not yet implemented
 
-- **Main / Configure** — Events tab + Catalog + Search + WV + Settings.
-  This is the "set up what I want to track" window; not consulted
-  during active play.
-- **Pinned Bosses** — only the boss groups from `PinnedView`. Tight
-  vertical strip with countdown + waypoint + collapsible achievement
-  list per boss.
-- **Pinned Achievements** — only the standalone (boss-less) pins:
-  legendary collection steps, raid achievements, etc.
+### Smart Legendary Selector (largest)
 
-Estimated work: a few hundred lines of frontend + a third entry in
-`tauri.conf.json` + `restore_state` loop. The IPC payloads already
-separate `boss_groups` from `standalone`, so no backend change is
-needed beyond the new window declaration.
+Cross-reference the user's `account_items` + wallet against each
+legendary's recipe, surface "X% complete" + the top 5 missing items.
 
-### Window collapse to thin bar
+Design fully captured (commit `57e38c8` agent transcript). Key
+pieces:
+- `data/legendary_recipes.json` — components dictionary +
+  per-legendary ingredient trees, referencing item_ids, currency_ids,
+  and collection_reward markers.
+- A new wallet sync module (`/v2/account/wallet` → `account_currencies`
+  table) since Spirit Shards, gold, map currencies live there.
+- A recipe walker in commands.rs that aggregates need across the tree
+  (avoiding double-counting Mystic Coins between Mystic Clover, Mystic
+  Tribute, and Gift of Fortune), compares to owned, returns a sorted
+  Vec<LegendaryProgress>.
+- New UI tab or in-card "Recipe progress" expansion in Catalog.
 
-Each window gets a `_` (or `▾`) button that hides everything but the
-header. Useful during active play — keep the overlay visible (so the
-hotkeys work and the user can see the boss header line) without it
-eating screen real estate.
+Estimated effort: ~30 hours, dominated by recipe data curation across
+the 32 legendaries.
 
-Implementation: pure React state in each window component, plus a
-shorter window height when collapsed (use `getCurrentWindow().setSize`
-or just rely on the body content collapsing). Persist the collapsed
-state per window in the existing `settings` table.
+Top gotchas documented in the agent transcript:
+1. Recursive gifts — Mystic Coins appear in Tribute, Fortune,
+   precursor; aggregate totals, don't decrement as you walk.
+2. Currency vs item — Mystic Coin is an item, gold is a currency.
+   Spirit Shards are *both* (currency id 23 and an ingredient item).
+3. Collection rewards don't have item ids until crafted — track via
+   `account_progress` against the collection step that grants them.
+4. Aurora/Vision/Coalescence don't go through the Mystic Forge —
+   they're forged by completing the collection achievement, which
+   consumes the inventory items.
+5. Mystic Clover RNG (~31 %) — treat clovers themselves as a leaf
+   item; don't try to model their RNG cost in coins/ectos (would
+   double-count with Tribute/Fortune).
+6. Some Gen2 precursors (Mechanism, Tigris, etc.) are account-bound
+   and not on the TP — flag with `precursor_tradeable: false`.
 
-### Configurable hotkeys from the Settings panel
+### Configurable hotkeys
+`useHotkeys.ts` currently hard-codes Ctrl+Shift+G/H/B/P. Add UI to
+let the user pick custom combos. Persist via the existing settings
+table. Validate via `isRegistered` + swap via `unregister` / `register`
+at runtime.
 
-`useHotkeys.ts` currently hard-codes the three shortcuts. Add UI to
-let the user pick custom key combos (validate against
-`isRegistered` + `unregister` + `register` to swap them at runtime).
-Persist via `appearance`-style JSON in `settings`.
+### Real builds for the Builds tab
+The Builds Manager infra ships with three placeholder chat codes.
+Replace by either:
+- Hand-curated from snowcrows.com / hardstuck.gg (paste real chat
+  codes into `data/builds.json`).
+- Optional future: `chatr` Rust crate (mentioned by the audit agent)
+  to parse / validate build template chat codes at compile time.
 
-### Configurable notification lead time + test button
-
-Currently `BOSS_NOTIFY_LEAD_MINUTES = 2` is hardcoded in
-`sync/engine.rs`. Make it a setting (1–15 min slider). Add a "Test
-notification" button in `SettingsPanel` so the user can verify the
-toast pipeline works without waiting for a real spawn.
-
-### Meta event notifications
-
-The boss-watcher loop only walks `pinned_bosses` (world bosses). The
-same logic should apply to pinned meta events: notify when a phase
-they care about (e.g. Soo-Won at the end of Dragon's End) is about to
-start. The data is already in `schedule.meta_events`.
-
-### More boss-link mappings
-
-Today's `achievement_boss_links.json` covers Tequatl, Triple Trouble,
-Shatterer — every world boss that has a dedicated achievement
-category in the GW2 API. The other 10 bosses (Karka Queen, Claw of
-Jormag, …) don't have categories; they only show up in retired daily
-PvE achievements that the GW2 API doesn't expose.
-
-If we want them, the path is manual research from the wiki (e.g.
-"Karka Queen Killer" sits under some other category) + augmenting the
-mapping by hand.
+### Wallet currencies
+Add `/v2/account/wallet` sync + a new `account_currencies` table.
+Useful in itself (currencies show in Item Search) and a prereq for
+Smart Legendary Selector. Estimated: ~1 hour.
 
 ## Aspirational backlog (large features, no commitment)
 
-Big features that have been discussed but not designed in detail. Each
-is its own project-scale effort and should get its own design pass
-before any code starts.
-
-### Smart legendary selection
-
-> *"Selection de légendaires à faire et optimisation de ce qu'il y'a à
-> faire à partir de mon compte, mes succès, mes items"*
-
-Given the user's current `account_progress` + `bank` + `inventory` +
-`wallet`, recommend the legendary that's closest to completion. Cross-
-reference what they already own (precursor in bank, partial gift
-collections, currencies) with the requirements of each legendary
-collection, then rank by remaining-effort.
-
-Data sources we'd need beyond what we cache today:
-- `/v2/account/bank`
-- `/v2/account/inventory`
-- `/v2/account/materials`
-- `/v2/account/wallet`
-- Recipe data: `/v2/recipes` + wiki recipes for the "Gift of …" components
-- Mystic Forge inputs
-
-Complex enough to be a project on its own.
-
 ### Pathing (TaCo-style markers)
-
-> *"TaCo et ses marqueurs mais en mieux, tous les pack de marqueurs sont
-> disponible simplement et peuvent être mis à jour automatiquement."*
-
 In-world POI markers rendered by reading the GW2 Mumble API position
 stream and drawing on the overlay. Requires:
+- Mumble shared memory reader for player coords.
+- `.taco` marker pack loader.
+- A transparent click-through canvas separate from the React UI
+  (likely a WGPU surface) for 3D projection.
 
-- Reading Mumble shared memory (`MumbleLink` block) for player coords.
-- Loading `.taco` marker packs (XML format).
-- Rendering 3D-projected markers — this means the overlay has to
-  render *behind* the cursor but *over* the game, with per-marker
-  occlusion. Likely needs a transparent click-through layer separate
-  from the current React UI, perhaps a WGPU canvas.
-
-This is a substantial scope addition. Consider whether linking the
-existing BlishHUD/ArcDPS markers via inter-process plugin is a saner
-path than re-implementing.
-
-### Builds Manager
-
-> *"Un manager de build GW2 avec les builds de snowcrows inclus."*
-
-Catalog of meta builds (Snowcrows data dump), pin a build per
-character, copy-paste chat code to the in-game build storage. Snowcrows
-publishes JSON-like dumps that can be scraped or fetched if they
-expose an API; otherwise it's a manual data effort.
+Substantial scope. Consider whether linking to existing BlishHUD /
+ArcDPS is saner than reimplementing.
 
 ### Mounts radial menu
+Circular hotkey palette popping up under the cursor when triggered
+(e.g. a mouse side-button). Click a mount icon to invoke its keybind.
 
-> *"Un menu radial de montures très pratique pour passer très vite de
-> l'une à l'autre"*
+### Item Search v2
+- Filter by rarity / location.
+- Click an item to open its wiki page.
+- Wallet currencies in the search results.
 
-A circular hotkey palette that, when triggered (e.g. mouse-button
-side-button), pops up under the cursor and lets the user click a
-mount icon to invoke its keybind. GW2 Radial does this; doing it
-"better" means tighter latency, configurable icons, and remembering
-the last-used mount per zone.
+### Builds Manager v2
+- Per-build trait + skill rendering (palette ids → icons).
+- Build template parse + validate via `chatr`.
+- Auto-update from snowcrows / hardstuck (if they ever publish JSON).
 
-### Item Search
+### Account dashboard
+- Total AP per area / per expansion.
+- Wallet balances at a glance.
+- Outstanding mastery / spirit-shard / fractal-relic totals.
 
-> *"Permet de chercher un item sur tout votre compte. (GW2 Efficiency
-> mais en mieux)"*
+### Multi-account
+Currently exactly one API key at a time. Multi-account would need a
+"profile" abstraction over the DB + a profile-picker in the header.
 
-Search-by-name across `/v2/account/bank`, `/v2/account/inventory`,
-`/v2/account/materials`, all characters' bags, and the wallet. Result
-list shows "where it is + how many". The `items_cache` we already
-maintain partially covers this — would need to extend the cache to
-all items the account has touched.
-
-### Daily/Weekly todos
-
-> *"Permet de créer une liste de chose à faire qui se réset soit tous
-> les jours soit toutes les semaines"*
-
-Free-form text todos with a reset schedule (00:00 UTC daily, Monday
-07:30 UTC weekly). Simple table; just need a `todos` table + UI.
-
-### Meta + boss notification observer
-
-> *"Vous permet de recevoir des notification pour les Métas et world
-> boss."*
-
-Partly built (the `sync::engine::spawn_boss_watcher_loop`). Extending
-it to metas + adding the lead-time setting + meta selection UI gets
-us to feature parity with the linked feature request.
+### Linux / macOS port
+DPAPI is Windows-only. Replace key storage with `tauri-plugin-stronghold`
+(IronFish) or `keyring-rs` (Credential Manager / Keychain wrapper).
+WebView2 dependency also limits us to Windows; Linux needs `webkit2gtk`.
 
 ## Tooling / housekeeping
 
 - `tauri build` MSI installer flow + CI.
-- A `--reset` flag or a settings-panel button to wipe the SQLite file
+- A `--reset` flag or settings-panel button to wipe the SQLite file
   (useful for re-running the bulk sync after spec changes).
-- A `feature_flag` table for staged rollouts of new behaviors.
+- Logging level dropdown in Settings (currently set via `RUST_LOG`).
+- Maybe a `feature_flag` table for staged rollouts of new behaviours.

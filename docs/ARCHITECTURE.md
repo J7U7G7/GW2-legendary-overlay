@@ -1,62 +1,60 @@
 # Architecture
 
-This is the technical deep-dive. For a user-facing intro see
-[README.md](../README.md). For the history of how we got here see
-[PIVOTS.md](PIVOTS.md).
+Technical deep-dive. For a user-facing intro see [README.md](../README.md).
+For the history of how we got here see [PIVOTS.md](PIVOTS.md).
 
 ## Top-down view
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│ Tauri 2 process                                                │
-│                                                                │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │ WebView (Edge / WebView2 on Windows)                     │  │
-│  │   React 19 + Zustand + TailwindCSS v3                    │  │
-│  │   - App.tsx routes by window label                       │  │
-│  │   - Overlay (main window): Pinned / Catalog / Search /WV │  │
-│  │   - EventsWindow (events label): boss + meta feed only   │  │
-│  │   - SettingsPanel: opacity, accent color, font size      │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                       ▲                                        │
-│                       │ tauri::invoke (typed via lib/tauri.ts) │
-│                       ▼                                        │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │ Rust backend                                             │  │
-│  │   api/        — GW2 client + DPAPI key + rate limiter   │  │
-│  │   db/         — SQLite schema/migrations + repository   │  │
-│  │   sync/       — engine, achievements, progress, WV, items│  │
-│  │   timers/     — boss schedule + spawn math              │  │
-│  │   scorer/     — weighted urgency ranking                │  │
-│  │   catalog/    — static legendary + boss-link JSON load  │  │
-│  │   commands.rs — Tauri IPC handlers                      │  │
-│  │   error.rs    — AppError enum (serializable to JS)      │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│ Tauri 2 process                                                 │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Three independent WebView windows (Edge / WebView2)      │   │
+│  │   each loads index.html with a different URL hash:       │   │
+│  │     - #main  → <Overlay/> (config + tabs)                │   │
+│  │     - #bosses → <BossesWindow/> (pinned boss groups)     │   │
+│  │     - #achievements → <AchievementsWindow/> (pinned ach) │   │
+│  │   App.tsx routes by getCurrentWindow().label.            │   │
+│  │   Each window has its OWN JS context + zustand store —   │   │
+│  │   cross-window sync goes through Tauri events.           │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                       ▲                                         │
+│                       │ tauri::invoke (typed via lib/tauri.ts)  │
+│                       ▼                                         │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Rust backend                                             │   │
+│  │   api/        — GW2 client (reqwest + rate limiter) +   │   │
+│  │                 DPAPI key storage + endpoint wrappers   │   │
+│  │   db/         — SQLite schema/migrations + repository   │   │
+│  │   sync/       — engine, achievements, progress, wv,     │   │
+│  │                 items (definitions), inventory (account)│   │
+│  │   timers/     — boss / meta schedule + spawn math       │   │
+│  │   scorer/     — weighted urgency ranking                │   │
+│  │   catalog/    — loaders for legendary + boss-link JSON  │   │
+│  │   builds.rs   — static builds catalog loader            │   │
+│  │   commands.rs — every #[tauri::command] handler         │   │
+│  │   error.rs    — AppError enum (serializable to JS)      │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
                        │
                        ▼
-            GW2 official API (no third-party services)
+                GW2 official API (no third-party services)
 ```
-
-The two-window layout (since commit `a612816`) is achieved by declaring
-both windows in `src-tauri/tauri.conf.json` with distinct labels (`main`
-and `events`), each loading `index.html` with a different URL fragment.
-`src/App.tsx` reads `getCurrentWindow().label` and renders either
-`<Overlay/>` or `<EventsWindow/>`.
 
 ## Crate / module layout
 
 ```
 src-tauri/
 ├── Cargo.toml             — Rust deps (Tauri 2, rusqlite, reqwest, etc.)
-├── tauri.conf.json        — window declarations, identifier, capabilities
+├── tauri.conf.json        — three window declarations, capabilities
 ├── capabilities/
-│   └── default.json       — Tauri 2 permission list (which commands JS can call)
+│   └── default.json       — permissions for all three windows
 ├── data/
-│   ├── boss_schedule.json — world bosses + meta events + ley-line
+│   ├── boss_schedule.json — 13 world bosses + 23 meta events + ley-line
 │   ├── achievement_boss_links.json — achievement_id → boss_id metadata
-│   └── legendary_collections.json  — curated legendary catalog
+│   ├── legendary_collections.json  — 32 curated legendary collections
+│   └── builds.json        — curated meta builds catalog
 └── src/
     ├── lib.rs             — Tauri Builder + setup hook + state mgmt
     ├── main.rs            — entry point (delegates to lib::run)
@@ -65,183 +63,239 @@ src-tauri/
     │   ├── auth.rs        — ApiKey newtype + DPAPI encrypt/decrypt
     │   ├── client.rs      — reqwest client + token-bucket rate limiter
     │   └── endpoints.rs   — typed wrappers for /v2/* endpoints
+    │                       (now includes bank, materials, characters,
+    │                        items batch — items fetched in lang=fr)
+    ├── builds.rs          — static builds catalog loader (include_str!)
     ├── catalog/
-    │   └── mod.rs         — JSON loaders for legendary + boss-link catalogs
+    │   └── mod.rs         — JSON loaders for legendary + boss-link
     ├── commands.rs        — all #[tauri::command] IPC handlers
     ├── db/
-    │   ├── schema.rs      — versioned migration list + migrate()
+    │   ├── schema.rs      — 6 versioned migrations + migrate()
     │   └── repository.rs  — Db struct (Mutex<Connection>) + helpers
     ├── scorer/
     │   └── ranking.rs     — Weights + Scoreable + rank()
     ├── sync/
-    │   ├── engine.rs      — SyncEngine (boss-watcher, periodic loops)
+    │   ├── engine.rs      — SyncEngine (5 spawned loops)
     │   ├── achievements.rs— bulk paginated definition sync
-    │   ├── progress.rs    — /v2/account/achievements + diff
+    │   ├── progress.rs    — /v2/account/achievements + diff snapshot
     │   ├── wizardsvault.rs— WV daily/weekly/special
-    │   └── items.rs       — items_cache fetch + lookup
+    │   ├── items.rs       — items_cache fetch + lookup (lang=fr)
+    │   └── inventory.rs   — account_items (bank/materials/chars)
     └── timers/
-        ├── schedule.rs    — WorldBoss / MetaEvent / Schedule structs + load
-        └── engine.rs      — prev_spawn / next_spawn / current_meta_phase /
-                             all_upcoming
+        ├── schedule.rs    — WorldBoss / MetaEvent / Schedule
+        └── engine.rs      — prev_spawn / next_spawn / current_meta_phase
+scripts/
+└── update_meta_events.py  — one-shot helper to bulk-replace meta_events
 
 src/
 ├── App.tsx                — routes by window label
 ├── main.tsx               — ReactDOM root
 ├── components/
 │   ├── Overlay.tsx        — main window shell (header, tabs, footer)
-│   ├── ApiKeySetup.tsx    — first-launch form
-│   ├── PinnedPanel.tsx    — boss groups + standalone pins + per-bit detail
-│   ├── EventsTab.tsx      — events list grouped by expansion (inside main)
-│   ├── EventsWindow.tsx   — events feed in its own window
-│   ├── CatalogView.tsx    — legendary catalog grouped by generation
-│   ├── SearchView.tsx     — name search across cached achievements
-│   ├── WizardsVaultPanel.tsx — WV objectives (legacy daily/weekly/special)
-│   └── SettingsPanel.tsx  — opacity / colors / font size sliders
+│   ├── BossesWindow.tsx   — bosses window root
+│   ├── AchievementsWindow.tsx — achievements window root
+│   ├── ApiKeySetup.tsx
+│   ├── PinnedPanel.tsx    — exports BossesView + AchievementsView
+│   ├── EventsTab.tsx
+│   ├── CatalogView.tsx
+│   ├── SearchView.tsx
+│   ├── MyItemsView.tsx    — account-wide item search
+│   ├── TodosView.tsx      — daily/weekly todos
+│   ├── BuildsView.tsx     — builds manager
+│   ├── WizardsVaultPanel.tsx
+│   └── SettingsPanel.tsx
 ├── hooks/
-│   └── useHotkeys.ts      — global shortcuts (Ctrl+Shift+G/H/E)
+│   ├── useHotkeys.ts      — Ctrl+Shift+G / H / B / P (global)
+│   ├── useCrossWindowSync.ts — listens for pinned_changed +
+│   │                            appearance_changed events
+│   └── useCollapse.ts     — collapse window to header strip via setSize
 ├── lib/
 │   ├── tauri.ts           — typed wrappers around invoke('cmd_…')
 │   └── format.ts          — stripGw2Markup, fillRequirement,
 │                            eventTimeLabel, wikiUrl
 ├── store/
 │   ├── app.ts             — primary Zustand store (data + actions)
-│   └── settings.ts        — appearance Zustand store
+│   └── settings.ts        — appearance store (writes CSS variables)
 ├── types/
 │   └── gw2.ts             — TS mirrors of every Rust IPC payload
 └── styles/
-    └── tailwind.css       — base + CSS variables for live theming
+    └── tailwind.css       — base + CSS variables + custom scrollbar
+                            + .ui-zoom class for font-scale slider
 ```
 
-## Data flow: a single user action
+## Data flow walk-through
 
 When the user clicks "+ Pin" on an achievement in the Catalog tab:
 
 1. React `onClick` → `useAppStore.pin(id, collectionKey)`
 2. `pin()` calls `invoke("cmd_pin_achievement", { achievementId, collectionKey })`
-3. Tauri serialises to the Rust command in `commands.rs::cmd_pin_achievement`
-4. The command calls `db.pin_achievement(id, collection_key)`
-5. SQLite `INSERT OR IGNORE INTO pinned_achievements (...)` runs
-6. Command returns `Ok(())`, JS promise resolves
-7. `pin()` then calls `await get().refresh()`
-8. `refresh()` triggers parallel `getWizardsVaultState / getProgressSummary
-   / getPinnedView` calls
-9. Each command queries SQLite, builds a `PinnedView` struct, sends back
-10. Zustand stores the new state, React re-renders Pinned + Catalog
-11. `pin()` then calls `api.warmItemCache()` so any Item-typed bits in the
-    new achievement get fetched from `/v2/items` and cached
-12. If `warmItemCache` returns > 0, `pin()` calls `refresh()` again so the
-    item names appear
-
-Steps 7-12 form the "post-mutation refresh" pattern used by every pin /
-unpin / boss-group action.
+3. Backend `commands.rs::cmd_pin_achievement` runs
+   `db.pin_achievement(...)` → SQLite `INSERT OR IGNORE INTO pinned_achievements`
+4. **Backend emits the `pinned_changed` Tauri event**
+5. Frontend returns `Ok(())`. The originating window's `pin()` calls
+   `refresh()` immediately (no need to wait for the event).
+6. **Every other window**'s `useCrossWindowSync` listener fires and
+   calls its own `refresh()` so the Pinned views in the bosses /
+   achievements windows reflect the new pin within the same frame.
+7. The originating window then calls `api.warmItemCache()` so any
+   Item-typed bits referenced by the new pin get fetched from
+   `/v2/items?lang=fr` and cached. If items were fetched, calls
+   `refresh()` again to surface their names.
 
 ## State storage
 
-There's only one persistent store: SQLite. It lives at
-`%APPDATA%\com.tripleseptconsulting.gw2overlay\gw2-overlay.sqlite` on
-Windows (the path is `app_data_dir()` from Tauri's path resolver).
+One persistent store: SQLite at
+`%APPDATA%\com.tripleseptconsulting.gw2overlay\gw2-overlay.sqlite`.
 
-Tables (current schema version 4):
+Tables (current schema version 6):
 
 | Table | Origin | Purpose |
 |---|---|---|
-| `_migrations` | bootstrap | tracks applied migration versions |
+| `_migrations` | bootstrap | applied versions |
 | `achievements` | bulk sync | full definition cache (~8 200 rows) |
 | `account_progress` | progress sync | per-achievement current/max/done/bits |
-| `daily_assignments` | (unused — legacy) | reserved for `/v2/achievements/daily` which is deprecated |
+| `daily_assignments` | (unused) | reserved for legacy `/v2/achievements/daily` (broken since WV) |
 | `wizardsvault` | WV sync | (period_type, period_start, objective_id) rows |
-| `settings` | manual | key/value: API key blob, appearance JSON, last_full_sync timestamp |
-| `achievement_metadata` | catalog load | `associated_boss`, `tags`, etc. for our own enrichment |
+| `settings` | manual | API key blob, appearance JSON, notification lead, last-sync timestamps |
+| `achievement_metadata` | catalog load | `associated_boss`, tags, etc. |
 | `pinned_achievements` | user | user's pinned achievement ids |
-| `pinned_bosses` | user | user's pinned world boss ids |
-| `legendary_collections` | catalog load | curated catalog of legendaries |
-| `legendary_collection_members` | catalog load | join table (collection_key, achievement_id, step) |
-| `items_cache` | items sync | id → name + description for Item-typed bits |
+| `pinned_bosses` | user | user's pinned world boss / meta ids |
+| `legendary_collections` | catalog load | curated catalog |
+| `legendary_collection_members` | catalog load | (collection_key, achievement_id, step) |
+| `items_cache` | items sync | id → French name + description |
+| `account_items` | inventory sync | (item_id, location, location_detail, count) across bank / materials / shared / characters / equipped slots |
+| `todos` | user | daily / weekly todos with auto-reset |
 
-The two boolean stores in the runtime — the **progress snapshot** (in-RAM
-`HashMap<u32, AccountAchievement>` used to compute diffs) and the
-**notified set** (in-RAM `HashSet<(boss_id, spawn_time)>` for de-duping
-notifications) — are rebuilt at boot from SQLite and live in
-`SyncEngine`. They're not persisted; they don't need to be.
+In-RAM stores (rebuilt at boot from SQLite):
+- **Progress snapshot** in `SyncEngine` — `HashMap<u32, AccountAchievement>` used to diff progress changes.
+- **Notified set** in `SyncEngine` — `HashSet<(boss_id, spawn_time)>` for de-duping toast notifications.
 
-## Sync engine lifecycle
+## SyncEngine lifecycle
 
-`SyncEngine` is created in the Tauri `setup` hook **iff** a valid API
-key is already stored, and it's recreated by `cmd_set_api_key` whenever
-the user enters a new key. It spawns four background tokio tasks via
-`tauri::async_runtime::spawn`:
+`SyncEngine` is built in the Tauri `setup` hook **iff** a key is
+stored, and is recreated by `cmd_set_api_key` on key rotation. It spawns
+**five** background tokio tasks via `tauri::async_runtime::spawn`:
 
-1. **Achievements bootstrap** — one-shot, runs at engine start. Skips if
-   `settings.achievements_last_full_sync < 7 days` ago. Otherwise pulls
-   `/v2/achievements?page=N&page_size=200` until exhausted (~42 pages for
-   ~8 200 achievements) and upserts the definitions.
-2. **Progress loop** — `tokio::time::interval(300s)` ticks every 5
-   minutes, pulls `/v2/account/achievements`, diffs against the in-RAM
-   snapshot (NewlyDone / Progressed / NewlyUnlocked changes), persists,
-   refreshes snapshot.
-3. **Wizard's Vault loop** — `interval(900s)`, hits daily/weekly/special
-   in sequence, persists per-period rows keyed by `(period_type,
-   period_start, objective_id)`.
-4. **Boss watcher loop** — `interval(30s)`. For each row in
-   `pinned_bosses`, computes `next_spawn(boss, now)`; if the next spawn
-   is within 2 minutes and we haven't notified for that `(boss_id,
-   spawn_time)` pair, fires a Windows toast via
-   `tauri-plugin-notification`. Garbage-collects expired pairs after 1h.
+1. **Achievements bootstrap** — one-shot. Skips if
+   `achievements_last_full_sync` is < 7 days ago. Else pulls
+   `/v2/achievements?page=N&page_size=200` until exhausted.
+2. **Progress loop** — `interval(300s)`. Pulls
+   `/v2/account/achievements`, diffs against snapshot, persists.
+3. **Wizard's Vault loop** — `interval(900s)`. Daily / weekly / special
+   in sequence.
+4. **Inventory loop** — `interval(1800s)`. Pulls bank + materials +
+   shared inventory + every character's bags AND equipment, wipes
+   and re-inserts `account_items`. Also warms `items_cache` (lang=fr).
+5. **Boss watcher** — `interval(30s)`. For each pinned boss / meta:
+   resolves via `world_bosses` or `meta_events` schedule arrays,
+   computes time-to-spawn, fires a Windows toast if ≤ configured
+   lead-time minutes. De-dupes per (id, spawn_time).
 
-All loops use `tokio_util::CancellationToken` so a key rotation (which
-calls `engine.shutdown()`) makes them exit cleanly on the next tick.
+All loops listen on a `CancellationToken` so a key rotation triggers a
+clean exit on the next tick.
 
-## Window-state plugin oddity
+## Cross-window event protocol
 
-`tauri-plugin-window-state` 2.4 does NOT auto-restore window position on
-its own — you have to call `WindowExt::restore_state(StateFlags::all())`
-explicitly in `setup`. We do this for both windows (`main` and `events`)
-in a loop. The plugin's `Builder::default()` only registers the save-on-
-close hook, not the restore-on-open.
+Each Tauri window runs in its own JS context with its own Zustand
+store + DOM. Mutations in one window must broadcast for the others
+to see them:
 
-`tauri.conf.json` declares window `width`/`height` but **not** `x`/`y` —
-the plugin's restore overrides the position on subsequent launches, and
-the first-ever launch defaults to OS-positioning (centered or whatever).
+- `pinned_changed` — emitted by `cmd_pin_achievement /
+  cmd_unpin_achievement / cmd_pin_boss / cmd_unpin_boss /
+  cmd_remove_boss_group`. Listener calls `useAppStore.refresh()`.
+- `appearance_changed` — emitted by `cmd_set_appearance`. Listener
+  calls `useSettingsStore.load()` which re-applies CSS variables to
+  the local document.
+
+Wired by `src/hooks/useCrossWindowSync.ts`, called on mount in each
+of the three top-level window components.
+
+## Three-window architecture
+
+Declared in `tauri.conf.json` with three `windows[]` entries (labels
+`main`, `bosses`, `achievements`), each loading `index.html` with a
+URL hash. `App.tsx` reads `getCurrentWindow().label` and renders the
+matching root component.
+
+Secondary windows (`bosses`, `achievements`) have a Tauri
+`on_window_event` interceptor in `lib.rs`: their close event is
+swallowed and replaced with `.hide()`, so the user can dismiss them
+without quitting the app. Only the main window quits the app on close
+(the ⏻ button in the main header calls
+`cmd_save_state_and_quit` for a clean save + exit).
+
+Each window:
+- Calls `useCollapse()` to bind the header's ▴ / ▾ button to
+  `getCurrentWindow().setSize`, shrinking to a 32 px header strip.
+- Calls `useCrossWindowSync()` to subscribe to backend events.
+- Wraps its scrollable content in a `<div class="ui-zoom">` whose
+  `zoom` is bound to `--ui-scale` (set by Settings panel slider).
+  Header buttons stay at 1× so they never get pushed off-screen.
+
+## Window-state plugin (persistence)
+
+`tauri-plugin-window-state` 2.4 saves position + size on window close,
+but does NOT auto-restore. We trigger restore explicitly in `setup`:
+
+```rust
+for label in ["main", "bosses", "achievements"] {
+    if let Some(w) = app.get_webview_window(label) {
+        let _ = w.restore_state(StateFlags::all());
+    }
+}
+```
+
+`tauri.conf.json` declares `width`/`height` but **NOT** `x`/`y` — those
+would override the plugin's restore. First-ever launch defaults to OS
+positioning.
+
+⚠ Killing the dev shell with Ctrl+C SIGINTs the process; window close
+events never fire and saved positions are lost for that session. The
+⏻ button in the main header calls `cmd_save_state_and_quit` which
+explicitly invokes `app.save_window_state(StateFlags::all())` before
+`app.exit(0)`.
 
 ## Rate limiting
 
-`api::client::ApiClient` uses a token-bucket: capacity 300 tokens
-refilled at 5 tok/sec (300 per minute, 50 % below the documented
-600/min limit). Every authenticated `GET` waits for a token. On a 429
-or 5xx response we sleep with exponential backoff (1, 2, 4, 8 s, max
-30) and retry up to 4 times. After that the call returns
-`AppError::RateLimited` (true 429s exhausted) or
-`AppError::Unavailable(status)` (5xx exhausted) so the UI can show a
-meaningful error instead of just "network error".
+`api::client::ApiClient` uses a token-bucket: capacity 300, refill 5/s
+(= 300/min, 50 % below the documented 600/min limit). On 429 / 5xx,
+exponential backoff (1s, 2s, 4s, 8s) up to 4 retries, then surfaces
+`AppError::RateLimited` or `AppError::Unavailable(status)`. The robust
+`cmd_check_api_key` treats *any* validation error as a soft failure
+so a transient API hiccup doesn't kick the user back to ApiKeySetup;
+real auth failures eventually surface from the periodic sync loops.
 
 ## Why these tech choices
 
-- **Tauri 2 vs Electron** — ~20 MB binary vs ~200 MB, native
-  transparent always-on-top window, lower CPU at rest, single Rust
-  binary for the sync engine.
-- **SQLite (rusqlite bundled)** vs file-based JSON — atomic
-  transactions for sync, indexed lookups for the 8 200-row
-  achievements table, no DLL dependency thanks to the bundled feature.
-- **Zustand** vs Redux — same shape but much less boilerplate, fits a
-  single-process app without ceremony.
-- **Tailwind** vs styled-components — CSS variables can be patched
-  at runtime by the Settings panel without round-tripping through React
-  state for every key/value.
-- **DPAPI** vs Stronghold — Windows-native, no master password
-  needed, no extra crate cost. Trades cross-platform (cross-machine
-  keys don't decrypt across user accounts — which is what we want for
-  a personal overlay).
+- **Tauri 2 vs Electron** — ~20 MB binary, native transparent
+  always-on-top window, lower CPU at rest.
+- **SQLite (rusqlite bundled)** — atomic transactions, no DLL, fast
+  indexed lookups for the 8 200-row achievements + variable-size
+  account_items.
+- **Zustand** vs Redux — minimal boilerplate. Per-window stores by
+  necessity (separate JS contexts).
+- **Tailwind + CSS variables** — Settings panel can patch
+  `--accent-color`, `--bg-color-rgba`, `--ui-scale` at runtime without
+  React re-renders.
+- **DPAPI** vs Stronghold — Windows-native, no master password, no
+  extra crate. Cross-platform was never a goal.
+- **CSS `zoom`** vs `font-size` — the UI uses explicit Tailwind pixel
+  sizes (`text-[10px]`, `text-xs`) so a font-size change wouldn't
+  scale anything visible. `zoom: var(--ui-scale)` on the content div
+  uniformly scales everything inside without breaking the header
+  layout.
+- **CSS variables for theme colors** — let one window's slider change
+  the value, and the `appearance_changed` event triggers every other
+  window's `loadSettings()` which re-applies those variables.
 
 ## Known constraints / non-goals
 
-- The overlay is **Windows-only by design**. DPAPI key storage,
-  WebView2 dependency, and the lack of a Linux/macOS Tauri-build
-  pipeline put this firmly in personal-tool territory.
-- It requires GW2 in **windowed fullscreen**. Exclusive fullscreen
-  renders the overlay invisible; we don't detect this yet but the
-  README warns about it.
-- No multi-account support — there's exactly one API key stored at a
-  time.
-- No system-tray icon. Closing the main window quits the app
-  (this is the intentional default behavior; closing the secondary
-  events window only hides it).
+- Windows-only by design (DPAPI, WebView2, no Linux/macOS Tauri build
+  pipeline).
+- Requires GW2 in **windowed fullscreen** (exclusive fullscreen
+  renders the overlay invisible — undetected today).
+- One API key at a time. No multi-account.
+- No system-tray icon. Closing the main window quits.
+- Builds catalog ships with placeholder chat codes — real codes must
+  be filled by the curator (see [README.md](../README.md) "Add a build
+  to the Builds tab").
