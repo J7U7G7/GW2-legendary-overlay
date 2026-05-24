@@ -160,6 +160,38 @@ pub async fn cmd_save_state_and_quit(app: tauri::AppHandle) -> Result<()> {
     Ok(())
 }
 
+/// Fire a sample notification so the user can verify the toast pipeline
+/// works without waiting for a real boss spawn.
+#[tauri::command]
+pub async fn cmd_test_notification(app: tauri::AppHandle) -> Result<()> {
+    use tauri_plugin_notification::NotificationExt;
+    app.notification()
+        .builder()
+        .title("GW2 Overlay")
+        .body("Test notification — if you see this, toasts are wired up correctly.")
+        .show()
+        .map_err(|e| AppError::Other(format!("notification failed: {e}")))?;
+    Ok(())
+}
+
+const NOTIFY_LEAD_KEY: &str = "notification_lead_minutes";
+pub const DEFAULT_NOTIFY_LEAD_MINUTES: i64 = 2;
+
+#[tauri::command]
+pub async fn cmd_get_notification_lead(state: State<'_, AppState>) -> Result<i64> {
+    Ok(state
+        .db
+        .get_setting(NOTIFY_LEAD_KEY)?
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(DEFAULT_NOTIFY_LEAD_MINUTES))
+}
+
+#[tauri::command]
+pub async fn cmd_set_notification_lead(state: State<'_, AppState>, minutes: i64) -> Result<()> {
+    let clamped = minutes.clamp(1, 15);
+    state.db.set_setting(NOTIFY_LEAD_KEY, &clamped.to_string())
+}
+
 // ============================================================================
 // Appearance settings (spec §5.6)
 // ============================================================================

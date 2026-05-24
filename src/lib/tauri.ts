@@ -40,4 +40,8 @@ export const api = {
   setAppearance: (appearance: AppearanceSettings) =>
     invoke<void>("cmd_set_appearance", { appearance }),
   saveStateAndQuit: () => invoke<void>("cmd_save_state_and_quit"),
+  testNotification: () => invoke<void>("cmd_test_notification"),
+  getNotificationLead: () => invoke<number>("cmd_get_notification_lead"),
+  setNotificationLead: (minutes: number) =>
+    invoke<void>("cmd_set_notification_lead", { minutes }),
 };

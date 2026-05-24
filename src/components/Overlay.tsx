@@ -8,21 +8,21 @@ import { useAppStore, type ViewKey } from "../store/app";
 import { useSettingsStore } from "../store/settings";
 import { ApiKeySetup } from "./ApiKeySetup";
 import { CatalogView } from "./CatalogView";
-import { PinnedPanel } from "./PinnedPanel";
+import { EventsTab } from "./EventsTab";
 import { SearchView } from "./SearchView";
 import { SettingsPanel } from "./SettingsPanel";
 import { WizardsVaultPanel } from "./WizardsVaultPanel";
 
 type TabConfig = { id: ViewKey; label: string };
 const TABS: TabConfig[] = [
-  { id: "pinned", label: "Pinned" },
+  { id: "events", label: "Events" },
   { id: "catalog", label: "Catalog" },
   { id: "search", label: "Search" },
   { id: "wv", label: "WV" },
 ];
 
-async function showEventsWindow() {
-  const w = await WebviewWindow.getByLabel("events");
+async function showWindowByLabel(label: string) {
+  const w = await WebviewWindow.getByLabel(label);
   if (w) {
     await w.show();
     await w.setFocus();
@@ -70,7 +70,8 @@ export function Overlay() {
         onSync={() => void triggerSync()}
         onClearKey={() => void clearApiKey()}
         onToggleSettings={() => setSettingsOpen(!settingsOpen)}
-        onShowEvents={() => void showEventsWindow()}
+        onShowBosses={() => void showWindowByLabel("bosses")}
+        onShowAchievements={() => void showWindowByLabel("achievements")}
         onToggleCollapse={() => setCollapsed(!collapsed)}
         onQuit={() => void api.saveStateAndQuit()}
       />
@@ -83,7 +84,7 @@ export function Overlay() {
         <>
           <Tabs current={view} onSelect={setView} pinnedCount={pinnedCount} />
           <div className="flex-1 flex flex-col overflow-hidden">
-            {view === "pinned" && <PinnedPanel />}
+            {view === "events" && <EventsTab />}
             {view === "catalog" && <CatalogView />}
             {view === "search" && <SearchView />}
             {view === "wv" && (
@@ -104,7 +105,7 @@ export function Overlay() {
             )}
             <span title="Hotkeys" className="opacity-70">
               {HOTKEY_LABELS.toggleVisibility} hide · {HOTKEY_LABELS.toggleClickThrough} c-through ·{" "}
-              {HOTKEY_LABELS.toggleEvents} events
+              {HOTKEY_LABELS.toggleBosses} bosses · {HOTKEY_LABELS.toggleAchievements} pinned
             </span>
           </footer>
         </>
@@ -122,7 +123,8 @@ function Header(props: {
   onSync: () => void;
   onClearKey: () => void;
   onToggleSettings: () => void;
-  onShowEvents: () => void;
+  onShowBosses: () => void;
+  onShowAchievements: () => void;
   onToggleCollapse: () => void;
   onQuit: () => void;
 }) {
@@ -165,11 +167,19 @@ function Header(props: {
         )}
         <button
           type="button"
-          onClick={props.onShowEvents}
+          onClick={props.onShowBosses}
           className="px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
-          title="Show events window"
+          title="Show pinned bosses window"
         >
-          📅
+          🐉
+        </button>
+        <button
+          type="button"
+          onClick={props.onShowAchievements}
+          className="px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
+          title="Show pinned achievements window"
+        >
+          📌
         </button>
         <button
           type="button"

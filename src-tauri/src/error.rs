@@ -37,6 +37,9 @@ pub enum AppError {
 
     #[error("windows crypto error: {0}")]
     WinCrypto(String),
+
+    #[error("{0}")]
+    Other(String),
 }
 
 impl Serialize for AppError {

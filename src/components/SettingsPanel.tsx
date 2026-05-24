@@ -1,9 +1,37 @@
+import { useEffect, useState } from "react";
+
+import { api } from "../lib/tauri";
 import { useSettingsStore } from "../store/settings";
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const appearance = useSettingsStore((s) => s.appearance);
   const update = useSettingsStore((s) => s.update);
   const reset = useSettingsStore((s) => s.reset);
+  const [notifLead, setNotifLead] = useState<number>(2);
+  const [testStatus, setTestStatus] = useState<"" | "sent" | "error">("");
+
+  useEffect(() => {
+    void api.getNotificationLead().then(setNotifLead).catch(() => {
+      /* keep default */
+    });
+  }, []);
+
+  const onChangeLead = (minutes: number) => {
+    setNotifLead(minutes);
+    void api.setNotificationLead(minutes).catch((e) => console.warn(e));
+  };
+
+  const onTestNotif = async () => {
+    setTestStatus("");
+    try {
+      await api.testNotification();
+      setTestStatus("sent");
+    } catch (e) {
+      console.warn("test notification failed:", e);
+      setTestStatus("error");
+    }
+    window.setTimeout(() => setTestStatus(""), 2500);
+  };
 
   return (
     <div className="flex flex-col h-full overflow-y-auto px-3 py-3 gap-3 text-xs">
@@ -81,6 +109,40 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       >
         Reset to defaults
       </button>
+
+      <div className="border-t border-white/10 pt-3 flex flex-col gap-2">
+        <h2 className="font-semibold">Notifications</h2>
+        <label className="flex flex-col gap-1">
+          <span className="opacity-70">
+            Alert when a pinned boss spawns in ({notifLead} min)
+          </span>
+          <input
+            type="range"
+            min={1}
+            max={15}
+            step={1}
+            value={notifLead}
+            onChange={(e) => onChangeLead(Number(e.target.value))}
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => void onTestNotif()}
+          className="self-start px-2 py-1 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+        >
+          Send a test notification
+        </button>
+        {testStatus === "sent" && (
+          <p className="text-[10px] text-[var(--accent-color)]">
+            ✓ Sent — check your Windows action center.
+          </p>
+        )}
+        {testStatus === "error" && (
+          <p className="text-[10px] text-red-300">
+            Could not send. Open the Tauri logs (RUST_LOG=info) to inspect.
+          </p>
+        )}
+      </div>
 
       <p className="opacity-50 text-[10px] mt-auto">
         Changes are applied live and persisted on close.

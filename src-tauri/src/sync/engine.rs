@@ -28,9 +28,9 @@ const ACHIEVEMENTS_STALE_DAYS: i64 = 7;
 /// to spawn). 30s is short enough to catch the ≤ 2 min trigger window without
 /// hammering the DB.
 const BOSS_WATCHER_INTERVAL: Duration = Duration::from_secs(30);
-/// Trigger a notification when a pinned boss is within this many minutes
-/// of its next spawn.
-const BOSS_NOTIFY_LEAD_MINUTES: i64 = 2;
+/// Fallback lead time when the user hasn't set one. Overridden by the
+/// `notification_lead_minutes` setting if present.
+const DEFAULT_BOSS_NOTIFY_LEAD_MINUTES: i64 = 2;
 
 #[derive(Clone)]
 pub struct SyncEngine {
@@ -213,6 +213,10 @@ fn check_pinned_boss_notifications(
     if pinned.is_empty() {
         return Ok(());
     }
+    let lead = db
+        .get_setting("notification_lead_minutes")?
+        .and_then(|s| s.parse::<i64>().ok())
+        .unwrap_or(DEFAULT_BOSS_NOTIFY_LEAD_MINUTES);
 
     for boss_id in pinned {
         let Some(boss) = schedule.world_bosses.iter().find(|b| b.id == boss_id) else {
@@ -220,7 +224,7 @@ fn check_pinned_boss_notifications(
         };
         let next = next_spawn(boss, now);
         let mins_until = (next - now).num_minutes();
-        if !(0..=BOSS_NOTIFY_LEAD_MINUTES).contains(&mins_until) {
+        if !(0..=lead).contains(&mins_until) {
             continue;
         }
         let key = (boss_id.clone(), next);

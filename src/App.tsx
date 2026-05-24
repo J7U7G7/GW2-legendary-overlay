@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-import { EventsWindow } from "./components/EventsWindow";
+import { AchievementsWindow } from "./components/AchievementsWindow";
+import { BossesWindow } from "./components/BossesWindow";
 import { Overlay } from "./components/Overlay";
 
 export default function App() {
@@ -12,6 +13,7 @@ export default function App() {
   }, []);
 
   if (label === null) return null;
-  if (label === "events") return <EventsWindow />;
+  if (label === "bosses") return <BossesWindow />;
+  if (label === "achievements") return <AchievementsWindow />;
   return <Overlay />;
 }

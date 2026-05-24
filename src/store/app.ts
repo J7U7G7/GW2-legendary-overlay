@@ -12,6 +12,8 @@ import type {
 } from "../types/gw2";
 
 type LoadingState = "idle" | "checking" | "syncing" | "error";
+/// `pinned` is kept for back-compat with old persisted state; the active
+/// tabs in the main window are events/catalog/search/wv.
 export type ViewKey = "pinned" | "events" | "catalog" | "search" | "wv";
 
 type AppStore = {
@@ -49,7 +51,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   apiKeyStatus: null,
   status: "idle",
   errorMessage: null,
-  view: "pinned",
+  view: "events",
 
   wizardsVault: null,
   summary: null,

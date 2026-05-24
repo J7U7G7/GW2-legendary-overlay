@@ -3,20 +3,18 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { useAppStore } from "../store/app";
 import { useSettingsStore } from "../store/settings";
-import { EventsTab } from "./EventsTab";
+import { BossesView } from "./PinnedPanel";
 
-export function EventsWindow() {
+export function BossesWindow() {
   const apiKeyStatus = useAppStore((s) => s.apiKeyStatus);
   const checkApiKey = useAppStore((s) => s.checkApiKey);
-  const setView = useAppStore((s) => s.setView);
   const loadSettings = useSettingsStore((s) => s.load);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     void checkApiKey();
     void loadSettings();
-    setView("events");
-  }, [checkApiKey, loadSettings, setView]);
+  }, [checkApiKey, loadSettings]);
 
   const onMouseDown = (e: React.MouseEvent) => {
     if (e.buttons === 1 && (e.target as HTMLElement).closest("[data-drag]")) {
@@ -39,7 +37,7 @@ export function EventsWindow() {
           data-tauri-drag-region
           className="flex-1 px-3 py-1.5 text-xs font-semibold cursor-grab active:cursor-grabbing"
         >
-          GW2 Events
+          🐉 Pinned Bosses
         </div>
         <div className="flex items-center gap-1 px-2">
           <button
@@ -54,7 +52,7 @@ export function EventsWindow() {
             type="button"
             onClick={() => void getCurrentWindow().hide()}
             className="px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
-            title="Hide events window (Ctrl+Shift+E or the 📅 button on the main overlay reopens it)"
+            title="Hide window (re-open via the 🐉 button on the main overlay)"
           >
             ✕
           </button>
@@ -62,7 +60,7 @@ export function EventsWindow() {
       </header>
       {!collapsed &&
         (apiKeyStatus ? (
-          <EventsTab />
+          <BossesView />
         ) : (
           <div className="flex-1 flex items-center justify-center text-xs opacity-60 px-4 text-center">
             Configure your API key in the main overlay first.

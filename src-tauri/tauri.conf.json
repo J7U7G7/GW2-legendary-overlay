@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "GW2 Overlay",
+        "title": "GW2 Configure",
         "width": 380,
         "height": 600,
         "transparent": true,
@@ -25,9 +25,9 @@
         "url": "index.html#main"
       },
       {
-        "label": "events",
-        "title": "GW2 Events",
-        "width": 340,
+        "label": "bosses",
+        "title": "GW2 Bosses",
+        "width": 380,
         "height": 500,
         "transparent": true,
         "decorations": false,
@@ -35,7 +35,20 @@
         "skipTaskbar": true,
         "resizable": true,
         "shadow": false,
-        "url": "index.html#events"
+        "url": "index.html#bosses"
+      },
+      {
+        "label": "achievements",
+        "title": "GW2 Achievements",
+        "width": 380,
+        "height": 500,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": true,
+        "shadow": false,
+        "url": "index.html#achievements"
       }
     ],
     "security": {

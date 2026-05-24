@@ -246,11 +246,11 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
   const isSoon = time.status === "future" && time.minutesUntilStart <= 120;
 
   const bandClass = isActive
-    ? "border-l-4 border-green-400 bg-green-400/10"
+    ? "border-l-4 border-green-400 bg-green-400/15"
     : isImminent
-      ? "border-l-4 border-amber-300 bg-amber-400/15"
+      ? "border-l-4 border-orange-500 bg-orange-500/20"
       : isSoon
-        ? "border-l-4 border-amber-300/60 bg-amber-400/5"
+        ? "border-l-4 border-amber-300/60 bg-amber-300/5"
         : "border-l-4 border-white/10";
 
   const hasAchievements = group.achievements.length > 0;
@@ -263,7 +263,7 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 text-xs">
             <span
-              className={`font-semibold ${isActive ? "text-green-300" : isImminent ? "text-amber-300" : ""}`}
+              className={`font-semibold ${isActive ? "text-green-300" : isImminent ? "text-orange-300" : ""}`}
             >
               {group.boss_name}
             </span>
@@ -272,7 +272,7 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
           </div>
           <div className="flex items-center gap-2 text-[10px] mt-0.5">
             <span
-              className={`font-mono ${isActive ? "text-green-300 font-semibold" : isImminent ? "text-amber-300" : "opacity-80"}`}
+              className={`font-mono ${isActive ? "text-green-300 font-semibold" : isImminent ? "text-orange-300 font-semibold" : "opacity-80"}`}
             >
               ⏰ {time.label}
             </span>
@@ -323,73 +323,69 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
   );
 }
 
-export function PinnedPanel() {
-  const pinned = useAppStore((s) => s.pinned);
-  const setView = useAppStore((s) => s.setView);
-
+function useTickingNow() {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
+  return now;
+}
 
+function EmptyState({ message, suggestion }: { message: string; suggestion?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-full text-xs opacity-60 gap-2 px-4 text-center">
+      <p>{message}</p>
+      {suggestion && <p className="text-[10px] opacity-70">{suggestion}</p>}
+    </div>
+  );
+}
+
+/** Show only pinned world boss / meta event groups. */
+export function BossesView() {
+  const pinned = useAppStore((s) => s.pinned);
+  const now = useTickingNow();
+  if (!pinned || pinned.boss_groups.length === 0) {
+    return (
+      <EmptyState
+        message="No pinned bosses yet."
+        suggestion="Open the main overlay → Events tab to pin world bosses and meta events."
+      />
+    );
+  }
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {pinned.boss_groups.map((g) => (
+        <BossGroupCard key={g.boss_id} group={g} now={now} />
+      ))}
+    </div>
+  );
+}
+
+/** Show only standalone (boss-less) pins: legendary steps, raid achievements, ad-hoc pins. */
+export function AchievementsView() {
+  const pinned = useAppStore((s) => s.pinned);
   const standaloneSorted = useMemo(() => {
     if (!pinned) return [];
     const active = pinned.standalone.filter((p) => !p.done);
     const done = pinned.standalone.filter((p) => p.done);
     return [...active, ...done];
   }, [pinned]);
-
-  if (!pinned || (pinned.boss_groups.length === 0 && pinned.standalone.length === 0)) {
+  if (standaloneSorted.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-xs opacity-60 gap-3 px-4 text-center">
-        <p>No pinned items yet.</p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setView("events")}
-            className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 rounded"
-          >
-            Browse events
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("catalog")}
-            className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 rounded"
-          >
-            Legendaries
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("search")}
-            className="px-2 py-1 text-xs bg-white/10 hover:bg-white/20 rounded"
-          >
-            Search
-          </button>
-        </div>
-      </div>
+      <EmptyState
+        message="No pinned achievements yet."
+        suggestion="Open the main overlay → Catalog or Search to pin collection steps."
+      />
     );
   }
-
   return (
     <div className="flex-1 overflow-y-auto">
-      {pinned.boss_groups.map((g) => (
-        <BossGroupCard key={g.boss_id} group={g} now={now} />
-      ))}
-      {standaloneSorted.length > 0 && (
-        <>
-          {pinned.boss_groups.length > 0 && (
-            <h3 className="px-3 py-1 text-[10px] uppercase tracking-wider opacity-60 bg-white/5">
-              Other pinned
-            </h3>
-          )}
-          <ul>
-            {standaloneSorted.map((item) => (
-              <AchievementRow key={item.id} item={item} />
-            ))}
-          </ul>
-        </>
-      )}
+      <ul>
+        {standaloneSorted.map((item) => (
+          <AchievementRow key={item.id} item={item} />
+        ))}
+      </ul>
     </div>
   );
 }

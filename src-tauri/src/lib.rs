@@ -39,13 +39,16 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_notification::init())
         .on_window_event(|window, event| {
-            // Closing the secondary events window hides it instead of
-            // killing the whole app. The primary "main" window keeps the
-            // default behavior (close = quit).
+            // Secondary windows (bosses + achievements) hide on close
+            // instead of quitting the app. Main window keeps default
+            // close-quits behavior.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "events" {
-                    api.prevent_close();
-                    let _ = window.hide();
+                match window.label() {
+                    "bosses" | "achievements" => {
+                        api.prevent_close();
+                        let _ = window.hide();
+                    }
+                    _ => {}
                 }
             }
         })
@@ -70,6 +73,9 @@ pub fn run() {
             commands::cmd_get_appearance,
             commands::cmd_set_appearance,
             commands::cmd_save_state_and_quit,
+            commands::cmd_test_notification,
+            commands::cmd_get_notification_lead,
+            commands::cmd_set_notification_lead,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");
@@ -136,9 +142,9 @@ pub fn run() {
             });
 
             // Explicitly restore previously-saved window position/size for
-            // both windows. The plugin doesn't override config-declared size
-            // on its own, so we trigger the restore from setup.
-            for label in ["main", "events"] {
+            // all three windows. The plugin doesn't override config-declared
+            // size on its own, so we trigger the restore from setup.
+            for label in ["main", "bosses", "achievements"] {
                 if let Some(window) = app.get_webview_window(label) {
                     if let Err(e) = window.restore_state(StateFlags::all()) {
                         warn!(label, error = %e, "window state restore failed");
