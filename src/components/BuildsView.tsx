@@ -29,6 +29,9 @@ function BuildCard({ build }: { build: Build }) {
               ? ` · ${"⭐".repeat(build.difficulty)}${"☆".repeat(Math.max(0, 3 - build.difficulty))}`
               : ""}
           </div>
+          <div className="text-[10px] opacity-50 truncate">
+            🎮 {build.game_mode} · 📚 {build.source}
+          </div>
           {build.gear_summary && (
             <div className="text-[10px] opacity-60 truncate">⚔ {build.gear_summary}</div>
           )}
@@ -64,9 +67,33 @@ function BuildCard({ build }: { build: Build }) {
   );
 }
 
+type FilterChipProps = {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+};
+
+function FilterChip({ label, active, onClick }: FilterChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        active
+          ? "px-1.5 py-0.5 rounded bg-[var(--accent-color)] text-black"
+          : "px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20"
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
 export function BuildsView() {
   const [all, setAll] = useState<Build[]>([]);
   const [profession, setProfession] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(null);
+  const [gameMode, setGameMode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -82,9 +109,32 @@ export function BuildsView() {
     return Array.from(set).sort();
   }, [all]);
 
+  const sources = useMemo(() => {
+    const set = new Set<string>();
+    for (const b of all) set.add(b.source);
+    return Array.from(set).sort();
+  }, [all]);
+
+  const gameModes = useMemo(() => {
+    const set = new Set<string>();
+    for (const b of all) set.add(b.game_mode);
+    // Canonical display order
+    const order = ["Raid", "Strike", "Fractal", "Open World", "WvW", "PvP"];
+    return Array.from(set).sort(
+      (a, b) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a))
+        - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)),
+    );
+  }, [all]);
+
   const filtered = useMemo(
-    () => (profession ? all.filter((b) => b.profession === profession) : all),
-    [all, profession],
+    () =>
+      all.filter(
+        (b) =>
+          (profession === null || b.profession === profession)
+          && (source === null || b.source === source)
+          && (gameMode === null || b.game_mode === gameMode),
+      ),
+    [all, profession, source, gameMode],
   );
 
   if (error) {
@@ -93,43 +143,55 @@ export function BuildsView() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="px-3 py-1.5 border-b border-white/10 flex items-center gap-1 flex-wrap text-[10px] shrink-0">
-        <button
-          type="button"
-          onClick={() => setProfession(null)}
-          className={
-            profession === null
-              ? "px-1.5 py-0.5 rounded bg-[var(--accent-color)] text-black"
-              : "px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20"
-          }
-        >
-          All
-        </button>
-        {professions.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => setProfession(p)}
-            className={
-              profession === p
-                ? "px-1.5 py-0.5 rounded bg-[var(--accent-color)] text-black"
-                : "px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20"
-            }
-          >
-            {p}
-          </button>
-        ))}
+      <div className="px-3 py-1 border-b border-white/10 flex flex-col gap-1 text-[10px] shrink-0">
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="opacity-50 mr-1">Mode:</span>
+          <FilterChip label="All" active={gameMode === null} onClick={() => setGameMode(null)} />
+          {gameModes.map((m) => (
+            <FilterChip
+              key={m}
+              label={m}
+              active={gameMode === m}
+              onClick={() => setGameMode(m)}
+            />
+          ))}
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="opacity-50 mr-1">Source:</span>
+          <FilterChip label="All" active={source === null} onClick={() => setSource(null)} />
+          {sources.map((s) => (
+            <FilterChip key={s} label={s} active={source === s} onClick={() => setSource(s)} />
+          ))}
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="opacity-50 mr-1">Class:</span>
+          <FilterChip
+            label="All"
+            active={profession === null}
+            onClick={() => setProfession(null)}
+          />
+          {professions.map((p) => (
+            <FilterChip
+              key={p}
+              label={p}
+              active={profession === p}
+              onClick={() => setProfession(p)}
+            />
+          ))}
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 ? (
-          <div className="px-3 py-2 text-xs opacity-60 italic">No builds for this profession.</div>
+          <div className="px-3 py-2 text-xs opacity-60 italic">
+            No builds match these filters.
+          </div>
         ) : (
           filtered.map((b) => <BuildCard key={b.id} build={b} />)
         )}
         <p className="px-3 py-2 text-[10px] opacity-50 italic">
-          Builds are a curated subset. To add more, drop entries in
-          <code> src-tauri/data/builds.json</code> with their chat codes from in-game (Hero panel →
-          Build template → right-click → Copy Chat Code).
+          Builds curated from Snowcrows + MetaBattle. To add more, drop entries in
+          <code> src-tauri/data/builds.json</code> with their chat codes from in-game (Hero
+          panel → Build template → right-click → Copy Chat Code).
         </p>
       </div>
     </div>

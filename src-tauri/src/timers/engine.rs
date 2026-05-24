@@ -1,7 +1,7 @@
 use chrono::{DateTime, Duration, NaiveTime, TimeZone, Utc};
 use serde::Serialize;
 
-use crate::timers::schedule::{MetaEvent, Schedule, WorldBoss, parse_hm};
+use crate::timers::schedule::{MetaEvent, MetaPhase, Schedule, WorldBoss, parse_hm};
 
 /// Compute the most recent spawn time at or before `now`, whether or not
 /// that spawn is still within its duration window. Returns None only if the
@@ -58,8 +58,24 @@ pub fn next_spawn(boss: &WorldBoss, now: DateTime<Utc>) -> DateTime<Utc> {
     }
 }
 
+/// Meta-event phases like "Idle", "Reset", "Prep", "Preparations" are filler
+/// used by the wiki to pad a cycle's phases out to its full duration (most
+/// cycles are 120 min). They are *not* meaningful events — the user is not
+/// expected to do anything during them, and the overlay must not display them
+/// as "active". Returning true here strips them from active-phase detection
+/// and from next-phase rotation.
+pub fn is_filler_phase_name(name: &str) -> bool {
+    let n = name.trim().to_ascii_lowercase();
+    matches!(
+        n.as_str(),
+        "idle" | "reset" | "prep" | "preparations" | "pinata/reset" | "pinata"
+    )
+}
+
 /// For a meta event with cyclical phases, return the currently-active phase
-/// (if any) and the next phase start, both anchored to UTC.
+/// (if any) and the next phase start, both anchored to UTC. Filler phases
+/// (Idle / Reset / Prep / Preparations) never count as active and are
+/// skipped when computing the next phase.
 pub fn current_meta_phase(meta: &MetaEvent, now: DateTime<Utc>) -> MetaPhaseInstant {
     let anchor = anchor_datetime(meta, now);
     let cycle = Duration::minutes(meta.cycle_minutes as i64);
@@ -78,6 +94,7 @@ pub fn current_meta_phase(meta: &MetaEvent, now: DateTime<Utc>) -> MetaPhaseInst
         .find(|p| {
             within_cycle_minutes >= p.offset_minutes
                 && within_cycle_minutes < p.offset_minutes + p.duration_minutes
+                && !is_filler_phase_name(&p.name)
         })
         .map(|p| ActivePhase {
             name: p.name.clone(),
@@ -86,10 +103,15 @@ pub fn current_meta_phase(meta: &MetaEvent, now: DateTime<Utc>) -> MetaPhaseInst
                 + Duration::minutes((p.offset_minutes + p.duration_minutes) as i64),
         });
 
-    // Next phase start (first phase whose offset > within_cycle, else first
-    // phase of the next cycle).
-    let next_phase = meta
+    // Next phase start: first NON-FILLER phase whose offset is strictly after
+    // the current cycle position. If none remains in this cycle, wrap to the
+    // first non-filler phase of the next cycle.
+    let real_phases: Vec<&MetaPhase> = meta
         .phases
+        .iter()
+        .filter(|p| !is_filler_phase_name(&p.name))
+        .collect();
+    let next_phase = real_phases
         .iter()
         .find(|p| p.offset_minutes > within_cycle_minutes)
         .map(|p| NextPhase {
@@ -97,7 +119,10 @@ pub fn current_meta_phase(meta: &MetaEvent, now: DateTime<Utc>) -> MetaPhaseInst
             starts_at: cycle_origin + Duration::minutes(p.offset_minutes as i64),
         })
         .unwrap_or_else(|| {
-            let first = &meta.phases[0];
+            // Wrap: first real phase next cycle. If no real phase exists
+            // (degenerate data — entire meta is filler), fall back to the
+            // first declared phase so we still produce *something*.
+            let first = real_phases.first().copied().unwrap_or(&meta.phases[0]);
             NextPhase {
                 name: first.name.clone(),
                 starts_at: cycle_origin + cycle + Duration::minutes(first.offset_minutes as i64),
@@ -333,6 +358,96 @@ mod tests {
         assert_eq!(active.name, "Mouth of Mordremoth");
         assert_eq!(i.next.name, "Lanes");
         assert_eq!(i.next.starts_at, utc(2026, 5, 24, 0, 30));
+    }
+
+    fn amnytas() -> MetaEvent {
+        // SotO-shaped meta: one real 25-min phase, then 95 min of Idle.
+        MetaEvent {
+            id: "amnytas".into(),
+            name: "Defense of Amnytas".into(),
+            expansion: None,
+            map: "Amnytas".into(),
+            waypoint_code: None,
+            cycle_minutes: 120,
+            anchor_utc: "00:00".into(),
+            phases: vec![
+                MetaPhase {
+                    offset_minutes: 0,
+                    name: "Defense of Amnytas".into(),
+                    duration_minutes: 25,
+                },
+                MetaPhase {
+                    offset_minutes: 25,
+                    name: "Idle".into(),
+                    duration_minutes: 95,
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn idle_phase_is_filler_no_active_reported() {
+        let m = amnytas();
+        // 01:00 UTC = 60 min into the cycle that started at 00:00. We're
+        // sitting in the Idle window (25..120). active should be None.
+        let now = utc(2026, 5, 24, 1, 0);
+        let i = current_meta_phase(&m, now);
+        assert!(i.active.is_none(), "Idle is filler; must not be active");
+        assert_eq!(i.next.name, "Defense of Amnytas");
+        // Next defense is the first phase of the next cycle, at 02:00.
+        assert_eq!(i.next.starts_at, utc(2026, 5, 24, 2, 0));
+    }
+
+    #[test]
+    fn real_phase_still_reported_active() {
+        let m = amnytas();
+        // 00:10 UTC = 10 min into Defense of Amnytas.
+        let now = utc(2026, 5, 24, 0, 10);
+        let i = current_meta_phase(&m, now);
+        let active = i.active.expect("real phase must be active");
+        assert_eq!(active.name, "Defense of Amnytas");
+        assert_eq!(active.ends_at, utc(2026, 5, 24, 0, 25));
+    }
+
+    #[test]
+    fn next_skips_filler_to_real_phase() {
+        // Multi-filler meta: real / Idle / real / Idle. Standing in the first
+        // Idle, "next" should be the second real phase, not the second Idle.
+        let m = MetaEvent {
+            id: "test".into(),
+            name: "Test".into(),
+            expansion: None,
+            map: "Test".into(),
+            waypoint_code: None,
+            cycle_minutes: 120,
+            anchor_utc: "00:00".into(),
+            phases: vec![
+                MetaPhase { offset_minutes: 0,  name: "A".into(),    duration_minutes: 20 },
+                MetaPhase { offset_minutes: 20, name: "Idle".into(), duration_minutes: 30 },
+                MetaPhase { offset_minutes: 50, name: "B".into(),    duration_minutes: 20 },
+                MetaPhase { offset_minutes: 70, name: "Idle".into(), duration_minutes: 50 },
+            ],
+        };
+        // 00:30 UTC = inside first Idle.
+        let now = utc(2026, 5, 24, 0, 30);
+        let i = current_meta_phase(&m, now);
+        assert!(i.active.is_none());
+        assert_eq!(i.next.name, "B");
+        assert_eq!(i.next.starts_at, utc(2026, 5, 24, 0, 50));
+    }
+
+    #[test]
+    fn is_filler_phase_name_recognises_common_variants() {
+        assert!(is_filler_phase_name("Idle"));
+        assert!(is_filler_phase_name("idle"));
+        assert!(is_filler_phase_name("Reset"));
+        assert!(is_filler_phase_name("Prep"));
+        assert!(is_filler_phase_name("Preparations"));
+        assert!(is_filler_phase_name("Pinata/Reset"));
+        assert!(!is_filler_phase_name("Defense of Amnytas"));
+        assert!(!is_filler_phase_name("Day: Securing Verdant Brink"));
+        // "Night Bosses" must not be filtered — it's a real Verdant Brink phase.
+        assert!(!is_filler_phase_name("Night Bosses"));
     }
 
     #[test]

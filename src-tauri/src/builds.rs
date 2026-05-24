@@ -19,6 +19,11 @@ pub struct Build {
     pub source: String,
     pub source_url: String,
     pub chat_code: String,
+    /// Game mode this build targets. Free-form to keep the JSON simple, but
+    /// the UI groups by the canonical values: "Raid", "Strike", "Fractal",
+    /// "Open World", "WvW", "PvP".
+    #[serde(default = "default_game_mode")]
+    pub game_mode: String,
     #[serde(default)]
     pub gear_summary: Option<String>,
     #[serde(default)]
@@ -27,6 +32,10 @@ pub struct Build {
     pub difficulty: Option<u8>,
     #[serde(default)]
     pub notes: Option<String>,
+}
+
+fn default_game_mode() -> String {
+    "Raid".to_string()
 }
 
 #[derive(Debug, Deserialize)]

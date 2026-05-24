@@ -55,6 +55,7 @@ export type Build = {
   source: string;
   source_url: string;
   chat_code: string;
+  game_mode: string;
   gear_summary: string | null;
   weapons: string | null;
   difficulty: number | null;
