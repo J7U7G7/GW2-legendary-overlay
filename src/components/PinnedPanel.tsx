@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAppStore } from "../store/app";
-import { stripGw2Markup } from "../lib/format";
+import { fillRequirement, stripGw2Markup } from "../lib/format";
 import type { PinnedBit, PinnedBossGroup, PinnedItem } from "../types/gw2";
 
-function wikiUrl(query: string) {
+function searchWikiUrl(query: string) {
   return `https://wiki.guildwars2.com/wiki/Special:Search?search=${encodeURIComponent(query)}`;
 }
 
@@ -66,7 +66,7 @@ function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
       {wikiQuery && (
         <a
           className="opacity-50 hover:opacity-100 text-[10px] mt-0.5"
-          href={wikiUrl(wikiQuery)}
+          href={searchWikiUrl(wikiQuery)}
           target="_blank"
           rel="noreferrer"
           title="Open wiki"
@@ -80,18 +80,18 @@ function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
 
 function AchievementDetails({ item }: { item: PinnedItem }) {
   const desc = stripGw2Markup(item.description);
-  const req = stripGw2Markup(item.requirement);
+  const req = fillRequirement(stripGw2Markup(item.requirement), item.max);
   return (
     <div className="pl-6 pr-3 pb-1.5 pt-0.5 text-[10px] opacity-90 leading-snug">
       {desc && <p className="opacity-80 mb-1 whitespace-pre-line">{desc}</p>}
       {req && <p className="opacity-70 italic mb-1 whitespace-pre-line">{req}</p>}
       <a
         className="text-[var(--accent-color)] opacity-80 hover:opacity-100 underline text-[10px]"
-        href={wikiUrl(item.name)}
+        href={searchWikiUrl(item.name)}
         target="_blank"
         rel="noreferrer"
       >
-        Open on wiki ↗
+        Open achievement on wiki ↗
       </a>
     </div>
   );
@@ -152,6 +152,7 @@ function AchievementRow({
   bossImminent?: boolean;
 }) {
   const unpin = useAppStore((s) => s.unpin);
+  const pin = useAppStore((s) => s.pin);
   const [open, setOpen] = useState(false);
   const ratio = item.completion_ratio;
   const ratioLabel =
@@ -162,8 +163,9 @@ function AchievementRow({
         : "0%";
   const hasDetails = !!(item.description || item.requirement || item.bits.length > 0);
 
+  const rowOpacity = item.is_pinned ? "" : "opacity-60";
   return (
-    <li className="border-t border-white/5">
+    <li className={`border-t border-white/5 ${rowOpacity}`}>
       <div className="pl-6 pr-3 py-1 flex items-center justify-between gap-2 text-[11px]">
         <button
           type="button"
@@ -199,14 +201,25 @@ function AchievementRow({
         </button>
         <div className="flex items-center gap-2 shrink-0">
           <span className="font-mono text-[10px] opacity-60">{ratioLabel}</span>
-          <button
-            type="button"
-            onClick={() => void unpin(item.id)}
-            className="opacity-40 hover:opacity-100 text-xs"
-            title="Unpin"
-          >
-            ✕
-          </button>
+          {item.is_pinned ? (
+            <button
+              type="button"
+              onClick={() => void unpin(item.id)}
+              className="opacity-40 hover:opacity-100 text-xs"
+              title="Unpin"
+            >
+              ✕
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void pin(item.id, null)}
+              className="opacity-40 hover:opacity-100 text-xs"
+              title="Pin this achievement"
+            >
+              📌
+            </button>
+          )}
         </div>
       </div>
       {open && hasDetails && (
@@ -226,8 +239,9 @@ function AchievementRow({
 }
 
 function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) {
-  // Default open when there are remaining achievements; closed otherwise.
-  const [open, setOpen] = useState(group.has_remaining);
+  // Default open whenever the group has any achievements — the user wants to
+  // see both done and to-do at a glance.
+  const [open, setOpen] = useState(group.achievements.length > 0);
   const removeBossGroup = useAppStore((s) => s.removeBossGroup);
   const removeTitle =
     group.explicitly_pinned && group.achievements.length > 0
@@ -298,7 +312,11 @@ function BossGroupCard({ group, now }: { group: PinnedBossGroup; now: number }) 
         <ul>
           {group.achievements
             .slice()
-            .sort((a, b) => Number(a.done) - Number(b.done))
+            .sort((a, b) => {
+              // Pinned first, then by done status (not done before done).
+              if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+              return Number(a.done) - Number(b.done);
+            })
             .map((item) => (
               <AchievementRow key={item.id} item={item} bossImminent={isSoon || isImminent} />
             ))}

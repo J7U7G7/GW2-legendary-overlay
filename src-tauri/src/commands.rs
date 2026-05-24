@@ -329,6 +329,10 @@ pub struct PinnedItemView {
     pub next_event: Option<UpcomingEvent>,
     pub score: f64,
     pub bits: Vec<PinnedBitView>,
+    /// True for items the user explicitly pinned. False for items that show
+    /// up in a boss group only because the user pinned the boss and this
+    /// achievement is linked to it.
+    pub is_pinned: bool,
 }
 
 #[derive(Serialize, Clone)]
@@ -656,6 +660,27 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<PinnedVie
         }
     }
 
+    // For each explicitly-pinned boss, also load every other achievement
+    // linked to that boss via achievement_metadata so the user sees the
+    // complete done / to-do picture, not just what they pinned themselves.
+    let already_in_groups: std::collections::HashSet<u32> = by_boss
+        .values()
+        .flat_map(|v| v.iter().map(|i| i.id))
+        .collect();
+    for boss_id in &pinned_boss_ids {
+        let related = load_boss_linked_achievements(
+            &state.db,
+            boss_id,
+            &upcoming_window,
+            &weights,
+            now,
+            &already_in_groups,
+        )?;
+        if !related.is_empty() {
+            by_boss.entry(boss_id.clone()).or_default().extend(related);
+        }
+    }
+
     // Union: event IDs from explicit pins + IDs referenced by pinned achievements
     let mut all_event_ids: Vec<String> = pinned_boss_ids.to_vec();
     for k in by_boss.keys() {
@@ -850,10 +875,103 @@ fn load_pinned_achievement_views(
                 next_event,
                 score: s,
                 bits,
+                is_pinned: true,
             }
         })
         .collect();
     Ok(items)
+}
+
+/// Load every achievement linked to a boss via achievement_metadata
+/// (excluding ids the caller already has). Used by cmd_get_pinned_view to
+/// surface the full done/to-do list for a pinned boss, not only the
+/// achievements the user explicitly pinned.
+fn load_boss_linked_achievements(
+    db: &Db,
+    boss_id: &str,
+    upcoming: &[UpcomingEvent],
+    weights: &Weights,
+    now: chrono::DateTime<chrono::Utc>,
+    exclude: &std::collections::HashSet<u32>,
+) -> Result<Vec<PinnedItemView>> {
+    let item_cache = load_item_cache_for_pinned(db)?;
+    let rows = db.with_conn(|c| {
+        let mut stmt = c.prepare(
+            "SELECT a.id, a.name, a.description, a.requirement, COALESCE(a.points, 0),
+                    a.bits,
+                    p.current, p.max, COALESCE(p.done, 0), p.bits
+             FROM achievement_metadata md
+             LEFT JOIN achievements a ON a.id = md.achievement_id
+             LEFT JOIN account_progress p ON p.achievement_id = md.achievement_id
+             WHERE md.associated_boss = ?1 AND a.id IS NOT NULL
+             ORDER BY a.id",
+        )?;
+        let mapped = stmt.query_map(rusqlite::params![boss_id], |r| {
+            Ok((
+                r.get::<_, i64>(0)? as u32,
+                r.get::<_, Option<String>>(1)?,
+                r.get::<_, Option<String>>(2)?,
+                r.get::<_, Option<String>>(3)?,
+                r.get::<_, i64>(4)?,
+                r.get::<_, Option<String>>(5)?,
+                r.get::<_, Option<i64>>(6)?,
+                r.get::<_, Option<i64>>(7)?,
+                r.get::<_, i64>(8)? != 0,
+                r.get::<_, Option<String>>(9)?,
+            ))
+        })?;
+        let mut out = Vec::new();
+        for row in mapped {
+            out.push(row?);
+        }
+        Ok(out)
+    })?;
+
+    let mut views = Vec::new();
+    for (id, name, description, requirement, points, bits_def, current, max, done, bits_done) in rows {
+        if exclude.contains(&id) {
+            continue;
+        }
+        let ratio = match (current, max) {
+            (Some(c), Some(m)) if m > 0 => (c as f64 / m as f64).clamp(0.0, 1.0),
+            _ => {
+                if done {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+        };
+        let related: Vec<String> = vec![boss_id.to_string()];
+        let scoreable = Scoreable {
+            id: id.to_string(),
+            completion_ratio: ratio,
+            reward_value: points.max(0) as u32,
+            effort_minutes: 30,
+            related_event_ids: related,
+        };
+        let s = score_item(&scoreable, upcoming, weights, now);
+        let next_event = upcoming.iter().find(|e| e.id == boss_id).cloned();
+        let bits = parse_bits(&bits_def, &bits_done, &item_cache);
+        views.push(PinnedItemView {
+            id,
+            name: name.unwrap_or_else(|| format!("Achievement #{id}")),
+            description,
+            requirement,
+            current,
+            max,
+            completion_ratio: ratio,
+            done,
+            points,
+            collection_key: None,
+            associated_boss: Some(boss_id.to_string()),
+            next_event,
+            score: s,
+            bits,
+            is_pinned: false,
+        });
+    }
+    Ok(views)
 }
 
 /// Collect every Item id referenced by a pinned achievement's bits and

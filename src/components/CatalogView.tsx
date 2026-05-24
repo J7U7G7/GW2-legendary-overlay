@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAppStore } from "../store/app";
+import { wikiUrl } from "../lib/format";
 import type { LegendaryCollection } from "../types/gw2";
 
 const KIND_LABEL: Record<string, string> = {
@@ -28,18 +29,18 @@ function CollectionCard({ collection }: { collection: LegendaryCollection }) {
   const total = collection.members.length;
   return (
     <div className="border-b border-white/5">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-white/5"
-      >
-        <div className="flex flex-col min-w-0 flex-1">
+      <div className="w-full px-3 py-2 flex items-center justify-between hover:bg-white/5">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className="flex-1 min-w-0 text-left flex flex-col"
+        >
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold truncate">{collection.name}</span>
             <KindBadge kind={collection.kind} />
           </div>
           <span className="text-[10px] opacity-50">{collection.generation}</span>
-        </div>
+        </button>
         <div className="text-[10px] font-mono opacity-60 flex items-center gap-2 shrink-0">
           <span>
             {collection.done_count}/{total} done
@@ -50,9 +51,24 @@ function CollectionCard({ collection }: { collection: LegendaryCollection }) {
               <span className="text-[var(--accent-color)]">{collection.pinned_count} pinned</span>
             </>
           )}
-          <span className="ml-1 opacity-60">{open ? "▾" : "▸"}</span>
+          <a
+            href={wikiUrl(collection.name)}
+            target="_blank"
+            rel="noreferrer"
+            className="opacity-60 hover:opacity-100"
+            title={`Recipe on wiki: ${collection.name}`}
+          >
+            📖
+          </a>
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="opacity-60 hover:opacity-100"
+          >
+            {open ? "▾" : "▸"}
+          </button>
         </div>
-      </button>
+      </div>
       {open && (
         <ul className="bg-white/[0.02]">
           {collection.members.map((m) => (

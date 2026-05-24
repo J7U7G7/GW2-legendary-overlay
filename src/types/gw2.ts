@@ -116,6 +116,7 @@ export type PinnedItem = {
   next_event: UpcomingEvent | null;
   score: number;
   bits: PinnedBit[];
+  is_pinned: boolean;
 };
 
 export type PinnedBossGroup = {
