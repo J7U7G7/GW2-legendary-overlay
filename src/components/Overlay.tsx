@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import { useHotkeys, HOTKEY_LABELS } from "../hooks/useHotkeys";
+import { api } from "../lib/tauri";
 import { useAppStore, type ViewKey } from "../store/app";
 import { useSettingsStore } from "../store/settings";
 import { ApiKeySetup } from "./ApiKeySetup";
@@ -44,6 +45,7 @@ export function Overlay() {
 
   const loadSettings = useSettingsStore((s) => s.load);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     void checkApiKey();
@@ -64,13 +66,16 @@ export function Overlay() {
         isSyncing={status === "syncing"}
         hasKey={apiKeyStatus !== null}
         settingsOpen={settingsOpen}
+        collapsed={collapsed}
         onSync={() => void triggerSync()}
         onClearKey={() => void clearApiKey()}
         onToggleSettings={() => setSettingsOpen(!settingsOpen)}
         onShowEvents={() => void showEventsWindow()}
+        onToggleCollapse={() => setCollapsed(!collapsed)}
+        onQuit={() => void api.saveStateAndQuit()}
       />
 
-      {settingsOpen ? (
+      {collapsed ? null : settingsOpen ? (
         <SettingsPanel onClose={() => setSettingsOpen(false)} />
       ) : !hasUsableKey ? (
         <ApiKeySetup />
@@ -113,10 +118,13 @@ function Header(props: {
   isSyncing: boolean;
   hasKey: boolean;
   settingsOpen: boolean;
+  collapsed: boolean;
   onSync: () => void;
   onClearKey: () => void;
   onToggleSettings: () => void;
   onShowEvents: () => void;
+  onToggleCollapse: () => void;
+  onQuit: () => void;
 }) {
   // Use the JS API explicitly because Tauri 2's data-tauri-drag-region
   // attribute injection didn't trigger drag on this user's environment.
@@ -171,6 +179,14 @@ function Header(props: {
         >
           ⚙
         </button>
+        <button
+          type="button"
+          onClick={props.onToggleCollapse}
+          className="px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
+          title={props.collapsed ? "Expand window" : "Collapse to header bar"}
+        >
+          {props.collapsed ? "▾" : "▴"}
+        </button>
         {props.hasKey && (
           <button
             type="button"
@@ -181,6 +197,14 @@ function Header(props: {
             ⏏
           </button>
         )}
+        <button
+          type="button"
+          onClick={props.onQuit}
+          className="px-2 py-0.5 text-xs opacity-50 hover:opacity-100"
+          title="Save layout and quit"
+        >
+          ⏻
+        </button>
       </div>
     </header>
   );

@@ -144,6 +144,23 @@ pub struct SyncReport {
 }
 
 // ============================================================================
+// App lifecycle
+// ============================================================================
+
+/// Save every open window's position/size to disk and then exit the app.
+/// Provides a graceful shutdown path that doesn't lose layout the way a
+/// SIGINT from `tauri dev` would.
+#[tauri::command]
+pub async fn cmd_save_state_and_quit(app: tauri::AppHandle) -> Result<()> {
+    use tauri_plugin_window_state::{AppHandleExt, StateFlags};
+    if let Err(e) = app.save_window_state(StateFlags::all()) {
+        tracing::warn!(error = %e, "save_window_state failed at quit");
+    }
+    app.exit(0);
+    Ok(())
+}
+
+// ============================================================================
 // Appearance settings (spec §5.6)
 // ============================================================================
 

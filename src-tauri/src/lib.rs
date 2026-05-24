@@ -69,6 +69,7 @@ pub fn run() {
             commands::cmd_warm_item_cache,
             commands::cmd_get_appearance,
             commands::cmd_set_appearance,
+            commands::cmd_save_state_and_quit,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

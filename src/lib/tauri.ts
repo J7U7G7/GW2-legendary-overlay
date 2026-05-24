@@ -39,4 +39,5 @@ export const api = {
   getAppearance: () => invoke<AppearanceSettings>("cmd_get_appearance"),
   setAppearance: (appearance: AppearanceSettings) =>
     invoke<void>("cmd_set_appearance", { appearance }),
+  saveStateAndQuit: () => invoke<void>("cmd_save_state_and_quit"),
 };
