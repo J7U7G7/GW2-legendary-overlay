@@ -1,10 +1,10 @@
 pub mod api;
 pub mod db;
 pub mod error;
+pub mod scorer;
 pub mod sync;
 pub mod timers;
 mod commands;
-mod scorer;
 
 use std::fs;
 use std::sync::Arc;
