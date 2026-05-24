@@ -15,6 +15,8 @@ use tokio::sync::Mutex;
 use tracing::{error, info, warn};
 use tracing_subscriber::EnvFilter;
 
+use tauri_plugin_window_state::{StateFlags, WindowExt as _};
+
 use crate::api::auth::load_api_key;
 use crate::api::client::ApiClient;
 use crate::commands::AppState;
@@ -109,6 +111,15 @@ pub fn run() {
             };
 
             app.manage(AppState { db, engine: Mutex::new(engine), schedule });
+
+            // Explicitly restore previously-saved window position/size.
+            // The plugin doesn't override the config-declared size on its own,
+            // so we have to trigger the restore from setup.
+            if let Some(window) = app.get_webview_window("main") {
+                if let Err(e) = window.restore_state(StateFlags::all()) {
+                    warn!(error = %e, "window state restore failed");
+                }
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

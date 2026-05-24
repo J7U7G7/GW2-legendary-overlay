@@ -16,8 +16,6 @@
         "title": "GW2 Overlay",
         "width": 380,
         "height": 600,
-        "x": 50,
-        "y": 50,
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,
