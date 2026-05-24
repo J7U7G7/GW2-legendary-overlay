@@ -10,6 +10,33 @@ pub enum AppError {
 
     #[error("serialization error: {0}")]
     Serde(#[from] serde_json::Error),
+
+    #[error("http error: {0}")]
+    Http(#[from] reqwest::Error),
+
+    #[error("gw2 api returned {status}: {body}")]
+    Api { status: u16, body: String },
+
+    #[error("invalid or revoked GW2 API key")]
+    Unauthorized,
+
+    #[error("GW2 API rate limit exceeded after retries")]
+    RateLimited,
+
+    #[error("GW2 API unavailable after retries (last status: {0})")]
+    Unavailable(u16),
+
+    #[error("invalid GW2 API key format")]
+    BadKeyFormat,
+
+    #[error("GW2 API key is missing required permissions: {0}")]
+    MissingPermissions(String),
+
+    #[error("no GW2 API key configured")]
+    NoApiKey,
+
+    #[error("windows crypto error: {0}")]
+    WinCrypto(String),
 }
 
 impl Serialize for AppError {

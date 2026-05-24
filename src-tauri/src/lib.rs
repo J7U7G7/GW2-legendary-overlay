@@ -1,7 +1,7 @@
-mod api;
+pub mod api;
+pub mod db;
+pub mod error;
 mod commands;
-mod db;
-mod error;
 mod scorer;
 mod sync;
 mod timers;
