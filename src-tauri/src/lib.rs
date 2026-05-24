@@ -34,6 +34,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             commands::cmd_set_api_key,
             commands::cmd_check_api_key,
@@ -52,6 +53,8 @@ pub fn run() {
             commands::cmd_remove_boss_group,
             commands::cmd_list_events,
             commands::cmd_warm_item_cache,
+            commands::cmd_get_appearance,
+            commands::cmd_set_appearance,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

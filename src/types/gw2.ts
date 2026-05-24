@@ -46,6 +46,14 @@ export type ProgressSummary = {
   points_earned: number;
 };
 
+export type AppearanceSettings = {
+  opacity: number;
+  accent_color: string;
+  text_color: string;
+  background_color: string;
+  font_size: number;
+};
+
 export type SyncReport = {
   progress_changes: number;
   wv_daily: number;

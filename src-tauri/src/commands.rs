@@ -138,6 +138,50 @@ pub struct SyncReport {
 }
 
 // ============================================================================
+// Appearance settings (spec §5.6)
+// ============================================================================
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct AppearanceSettings {
+    pub opacity: f64,
+    pub accent_color: String,
+    pub text_color: String,
+    pub background_color: String,
+    pub font_size: u32,
+}
+
+impl Default for AppearanceSettings {
+    fn default() -> Self {
+        Self {
+            opacity: 0.85,
+            accent_color: "#7fb069".into(),
+            text_color: "#e8e8e8".into(),
+            background_color: "#000000".into(),
+            font_size: 12,
+        }
+    }
+}
+
+const APPEARANCE_KEY: &str = "appearance";
+
+#[tauri::command]
+pub async fn cmd_get_appearance(state: State<'_, AppState>) -> Result<AppearanceSettings> {
+    let raw = state.db.get_setting(APPEARANCE_KEY)?;
+    Ok(raw
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default())
+}
+
+#[tauri::command]
+pub async fn cmd_set_appearance(
+    state: State<'_, AppState>,
+    appearance: AppearanceSettings,
+) -> Result<()> {
+    let json = serde_json::to_string(&appearance)?;
+    state.db.set_setting(APPEARANCE_KEY, &json)
+}
+
+// ============================================================================
 // Read-only views for the UI
 // ============================================================================
 

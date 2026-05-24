@@ -1,13 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { useHotkeys, HOTKEY_LABELS } from "../hooks/useHotkeys";
 import { useAppStore, type ViewKey } from "../store/app";
+import { useSettingsStore } from "../store/settings";
 import { ApiKeySetup } from "./ApiKeySetup";
 import { CatalogView } from "./CatalogView";
 import { EventsTab } from "./EventsTab";
 import { PinnedPanel } from "./PinnedPanel";
 import { SearchView } from "./SearchView";
+import { SettingsPanel } from "./SettingsPanel";
 import { WizardsVaultPanel } from "./WizardsVaultPanel";
 
 type TabConfig = { id: ViewKey; label: string };
@@ -33,9 +35,13 @@ export function Overlay() {
   const pinnedCount =
     (pinned?.boss_groups.length ?? 0) + (pinned?.standalone.length ?? 0);
 
+  const loadSettings = useSettingsStore((s) => s.load);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   useEffect(() => {
     void checkApiKey();
-  }, [checkApiKey]);
+    void loadSettings();
+  }, [checkApiKey, loadSettings]);
 
   useHotkeys();
 
@@ -44,17 +50,21 @@ export function Overlay() {
   return (
     <main
       className="h-screen w-screen flex flex-col text-[var(--text-color)] overflow-hidden"
-      style={{ backgroundColor: "rgba(0, 0, 0, var(--bg-opacity))" }}
+      style={{ backgroundColor: "var(--bg-color-rgba, rgba(0, 0, 0, 0.85))" }}
     >
       <Header
         canSync={hasUsableKey}
         isSyncing={status === "syncing"}
         hasKey={apiKeyStatus !== null}
+        settingsOpen={settingsOpen}
         onSync={() => void triggerSync()}
         onClearKey={() => void clearApiKey()}
+        onToggleSettings={() => setSettingsOpen(!settingsOpen)}
       />
 
-      {!hasUsableKey ? (
+      {settingsOpen ? (
+        <SettingsPanel onClose={() => setSettingsOpen(false)} />
+      ) : !hasUsableKey ? (
         <ApiKeySetup />
       ) : (
         <>
@@ -95,8 +105,10 @@ function Header(props: {
   canSync: boolean;
   isSyncing: boolean;
   hasKey: boolean;
+  settingsOpen: boolean;
   onSync: () => void;
   onClearKey: () => void;
+  onToggleSettings: () => void;
 }) {
   // Use the JS API explicitly because Tauri 2's data-tauri-drag-region
   // attribute injection didn't trigger drag on this user's environment.
@@ -135,6 +147,14 @@ function Header(props: {
             )}
           </button>
         )}
+        <button
+          type="button"
+          onClick={props.onToggleSettings}
+          className={`px-2 py-0.5 text-xs ${props.settingsOpen ? "text-[var(--accent-color)]" : "opacity-50 hover:opacity-100"}`}
+          title="Settings"
+        >
+          ⚙
+        </button>
         {props.hasKey && (
           <button
             type="button"

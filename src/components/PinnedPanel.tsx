@@ -10,8 +10,9 @@ function wikiUrl(query: string) {
 
 function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
   const cleanText = stripGw2Markup(bit.text);
-  const hasText = cleanText.length > 0;
   const cleanName = stripGw2Markup(bit.resolved_name);
+  const cleanDesc = stripGw2Markup(bit.resolved_description);
+  const hasText = cleanText.length > 0;
   const primaryLabel =
     cleanName ||
     (hasText
@@ -19,11 +20,15 @@ function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
       : bit.ref_id !== null
         ? `${bit.kind} #${bit.ref_id}`
         : bit.kind);
-  // Sub-line: the in-game "how to get it" text plus the API item description.
+  // Sub-line: only show things that add information *over* the primary label.
+  const seen = new Set<string>([primaryLabel]);
   const subLines: string[] = [];
-  if (hasText && cleanText !== cleanName) subLines.push(cleanText);
-  const cleanDesc = stripGw2Markup(bit.resolved_description);
-  if (cleanDesc.length > 0) subLines.push(cleanDesc);
+  for (const candidate of [cleanText, cleanDesc]) {
+    if (candidate.length > 0 && !seen.has(candidate)) {
+      seen.add(candidate);
+      subLines.push(candidate);
+    }
+  }
   const wikiQuery = bit.resolved_name
     ? bit.resolved_name
     : bit.ref_id !== null && bit.kind !== "Text"

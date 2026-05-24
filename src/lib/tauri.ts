@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   AchievementSearchResult,
   ApiKeyStatus,
+  AppearanceSettings,
   EventView,
   LegendaryCollection,
   PinnedView,
@@ -35,4 +36,7 @@ export const api = {
   removeBossGroup: (bossId: string) => invoke<void>("cmd_remove_boss_group", { bossId }),
   listEvents: () => invoke<EventView[]>("cmd_list_events"),
   warmItemCache: () => invoke<number>("cmd_warm_item_cache"),
+  getAppearance: () => invoke<AppearanceSettings>("cmd_get_appearance"),
+  setAppearance: (appearance: AppearanceSettings) =>
+    invoke<void>("cmd_set_appearance", { appearance }),
 };
