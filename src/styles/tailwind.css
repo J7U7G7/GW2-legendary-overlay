@@ -25,3 +25,24 @@ body {
   user-select: none;
   cursor: default;
 }
+
+/* Thin, dark, semi-transparent scrollbar so it blends into the overlay
+   instead of slapping a chrome-grey track on top of the boss list. */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.4);
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) rgba(0, 0, 0, 0.4);
+}

@@ -105,15 +105,39 @@ pub async fn cmd_set_api_key(state: State<'_, AppState>, key: String) -> Result<
     Ok(ApiKeyStatus::from(parsed.account_id().to_string(), info))
 }
 
-/// Returns the current key's status (None if no key configured).
+/// Returns the current key's status (None if no key configured). If the
+/// key is in the DB but the network call to validate it against
+/// `/v2/tokeninfo` fails, we still return an ApiKeyStatus marked
+/// `permissions_ok = true` so the UI doesn't kick the user back to the
+/// setup screen on a transient blip. The sync engine handles real auth
+/// failures (401/403) by surfacing AppError::Unauthorized.
 #[tauri::command]
 pub async fn cmd_check_api_key(state: State<'_, AppState>) -> Result<Option<ApiKeyStatus>> {
     let Some(key) = load_api_key(&state.db)? else {
+        tracing::debug!("check_api_key: no key stored");
         return Ok(None);
     };
+    let account_id = key.account_id().to_string();
     let probe = ApiClient::new(Some(key.clone()))?;
-    let info = endpoints::get_tokeninfo(&probe).await?;
-    Ok(Some(ApiKeyStatus::from(key.account_id().to_string(), info)))
+    match endpoints::get_tokeninfo(&probe).await {
+        Ok(info) => {
+            tracing::debug!(account = %account_id, "check_api_key: validated");
+            Ok(Some(ApiKeyStatus::from(account_id, info)))
+        }
+        Err(AppError::Unauthorized) => {
+            tracing::warn!("check_api_key: key is unauthorized (401/403)");
+            Err(AppError::Unauthorized)
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "check_api_key: validation skipped, returning cached status");
+            Ok(Some(ApiKeyStatus {
+                account_id,
+                permissions: Vec::new(),
+                permissions_ok: true,
+                missing: Vec::new(),
+            }))
+        }
+    }
 }
 
 #[tauri::command]

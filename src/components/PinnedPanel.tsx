@@ -341,11 +341,28 @@ function EmptyState({ message, suggestion }: { message: string; suggestion?: str
   );
 }
 
-/** Show only pinned world boss / meta event groups. */
+/** Show only pinned world boss / meta event groups, sorted by spawn proximity. */
 export function BossesView() {
   const pinned = useAppStore((s) => s.pinned);
   const now = useTickingNow();
-  if (!pinned || pinned.boss_groups.length === 0) {
+  // Sort by next_spawn ascending. Active events (start_at in the past)
+  // bubble up first because their start_at is the smallest value; future
+  // events follow from soonest to latest. Backend already sorts this way
+  // but we re-sort here so a late refresh / partial update still renders
+  // in the expected order.
+  const sorted = useMemo(
+    () =>
+      pinned
+        ? pinned.boss_groups
+            .slice()
+            .sort(
+              (a, b) =>
+                new Date(a.next_spawn).getTime() - new Date(b.next_spawn).getTime(),
+            )
+        : [],
+    [pinned],
+  );
+  if (!pinned || sorted.length === 0) {
     return (
       <EmptyState
         message="No pinned bosses yet."
@@ -355,7 +372,7 @@ export function BossesView() {
   }
   return (
     <div className="flex-1 overflow-y-auto">
-      {pinned.boss_groups.map((g) => (
+      {sorted.map((g) => (
         <BossGroupCard key={g.boss_id} group={g} now={now} />
       ))}
     </div>
