@@ -2,9 +2,9 @@ pub mod api;
 pub mod db;
 pub mod error;
 pub mod sync;
+pub mod timers;
 mod commands;
 mod scorer;
-mod timers;
 
 use std::fs;
 use std::sync::Arc;
