@@ -16,6 +16,7 @@ import { MyItemsView } from "./MyItemsView";
 import { SearchView } from "./SearchView";
 import { SettingsPanel } from "./SettingsPanel";
 import { TodosView } from "./TodosView";
+import { UpdatePrompt } from "./UpdatePrompt";
 import { WizardsVaultPanel } from "./WizardsVaultPanel";
 
 type TabConfig = { id: ViewKey; label: string };
@@ -84,6 +85,8 @@ export function Overlay() {
         onToggleCollapse={toggleCollapse}
         onQuit={() => void api.saveStateAndQuit()}
       />
+
+      {!collapsed && <UpdatePrompt />}
 
       {collapsed ? null : settingsOpen ? (
         <SettingsPanel onClose={() => setSettingsOpen(false)} />

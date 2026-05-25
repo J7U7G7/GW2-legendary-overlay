@@ -61,6 +61,19 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/J7U7G7/GW2-legendary-overlay/releases/latest/download/latest.json"
+      ],
+      "dialog": false,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFQUIzNUYxOEU4RkI3NzcKUldSM3Q0K084VFdyN2xqdXhZTGpSMkpRUyt1WjBkTkNkejk5VjhFSElTNk1TbWRxd0RDNkhneXkK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

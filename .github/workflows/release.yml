@@ -5,13 +5,12 @@ on:
     tags:
       - "v*"
 
-# Allow the workflow to create / update releases.
 permissions:
   contents: write
 
 jobs:
   build-windows:
-    name: Build MSI + NSIS installers
+    name: Build MSI + NSIS installers (signed) + latest.json
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,18 +29,63 @@ jobs:
       - name: Install npm deps
         run: npm ci
 
-      # `npm run tauri build` runs `vite build` via the beforeBuildCommand
-      # hook in tauri.conf.json, then `cargo build --release`, then bundles
-      # via tauri-bundler (MSI + NSIS by default on Windows).
-      - name: Tauri build
+      # The Tauri build picks up these env vars and signs the bundle.
+      # Both are repository secrets; if either is missing, `tauri build`
+      # still succeeds but emits unsigned .sig files (zero bytes) and the
+      # auto-updater will refuse to apply.
+      - name: Tauri build (signs MSI + NSIS bundles)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build
 
-      - name: Upload installers to GitHub Release
+      # Pluck the just-built NSIS .exe + its .sig and assemble the
+      # manifest the auto-updater fetches. Tauri's updater honours either
+      # MSI or NSIS; we point at NSIS because it supports `passive` install
+      # mode (no UAC prompt nag on every update).
+      - name: Generate latest.json manifest
+        id: manifest
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          $bundleDir = "src-tauri/target/release/bundle/nsis"
+          $exe = Get-ChildItem -Path $bundleDir -Filter "*-setup.exe" | Select-Object -First 1
+          $sig = Get-ChildItem -Path $bundleDir -Filter "*-setup.exe.sig" | Select-Object -First 1
+          if (-not $exe -or -not $sig) {
+            Write-Error "NSIS installer or signature not found in $bundleDir"
+            exit 1
+          }
+          $signature = Get-Content $sig.FullName -Raw
+          $assetUrl = "https://github.com/${{ github.repository }}/releases/download/$tag/$($exe.Name)"
+          $manifest = @{
+            version   = $version
+            notes     = "See the release page for details."
+            pub_date  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = $signature.Trim()
+                url       = $assetUrl
+              }
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 6 | Out-File -FilePath "latest.json" -Encoding utf8
+          Write-Host "=== latest.json ==="
+          Get-Content latest.json
+          Write-Host "==================="
+          Write-Host "exe=$($exe.FullName)"
+          Write-Host "exeName=$($exe.Name)"
+
+      - name: Upload installers + manifest to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/msi/*.msi.sig
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe.sig
+            latest.json
           generate_release_notes: true
           draft: false
           prerelease: false
+          fail_on_unmatched_files: true
