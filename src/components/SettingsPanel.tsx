@@ -102,6 +102,32 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     void setHotkeys({ ...hotkeys, [field]: value });
   };
 
+  // Two-step reset: first click arms, second within 3 s commits. Avoids the
+  // user nuking their data with a single fat-finger.
+  const [resetArmed, setResetArmed] = useState(false);
+  const [resetStatus, setResetStatus] = useState<"" | "wiping" | "done" | "error">("");
+  useEffect(() => {
+    if (!resetArmed) return;
+    const t = window.setTimeout(() => setResetArmed(false), 3000);
+    return () => window.clearTimeout(t);
+  }, [resetArmed]);
+  const onReset = async () => {
+    if (!resetArmed) {
+      setResetArmed(true);
+      return;
+    }
+    setResetArmed(false);
+    setResetStatus("wiping");
+    try {
+      await api.resetDatabase();
+      setResetStatus("done");
+      window.setTimeout(() => setResetStatus(""), 2500);
+    } catch (e) {
+      console.warn("resetDatabase failed:", e);
+      setResetStatus("error");
+    }
+  };
+
   useEffect(() => {
     void api.getNotificationLead().then(setNotifLead).catch(() => {
       /* keep default */
@@ -272,6 +298,40 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           Click a combo, press the new keys. Need at least one modifier
           (Ctrl/Alt/Shift). Esc cancels. Re-binds immediately.
         </p>
+      </div>
+
+      <div className="border-t border-red-400/30 pt-3 flex flex-col gap-2">
+        <h2 className="font-semibold text-red-300">Danger zone</h2>
+        <p className="text-[10px] opacity-70">
+          Wipe every cached achievement, item, todo, wallet currency, and
+          pinned entry. Keeps your API key + appearance settings. Useful when
+          a sync goes sideways or after a spec change. Triggers a fresh
+          re-sync on the next periodic tick.
+        </p>
+        <button
+          type="button"
+          onClick={() => void onReset()}
+          disabled={resetStatus === "wiping"}
+          className={
+            resetArmed
+              ? "self-start px-2 py-1 text-[10px] bg-red-500 text-white rounded"
+              : "self-start px-2 py-1 text-[10px] bg-red-400/20 hover:bg-red-400/30 text-red-200 rounded disabled:opacity-40"
+          }
+        >
+          {resetStatus === "wiping"
+            ? "Wiping…"
+            : resetArmed
+              ? "Click again to confirm wipe"
+              : "🗑 Reset database"}
+        </button>
+        {resetStatus === "done" && (
+          <p className="text-[10px] text-[var(--accent-color)]">
+            ✓ Wiped. Hit Sync (↻) in the header to refill.
+          </p>
+        )}
+        {resetStatus === "error" && (
+          <p className="text-[10px] text-red-300">Reset failed; check logs.</p>
+        )}
       </div>
 
       <p className="opacity-50 text-[10px] mt-auto">

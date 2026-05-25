@@ -65,4 +65,5 @@ export const api = {
   listBuilds: (profession?: string) =>
     invoke<Build[]>("cmd_list_builds", { profession: profession ?? null }),
   legendaryProgress: () => invoke<LegendaryProgress[]>("cmd_legendary_progress"),
+  resetDatabase: () => invoke<void>("cmd_reset_database"),
 };

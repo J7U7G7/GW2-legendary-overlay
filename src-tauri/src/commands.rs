@@ -209,6 +209,21 @@ pub async fn cmd_save_state_and_quit(app: tauri::AppHandle) -> Result<()> {
     Ok(())
 }
 
+/// Wipe every data table (achievements, items, todos, wallet, etc.) while
+/// preserving the API key + user preferences. Re-seeds the curated catalogs
+/// (legendary_collections, boss links) so the Catalog tab isn't empty after
+/// the wipe. The caller is expected to fire a sync afterwards to refill
+/// from /v2/* — we emit `pinned_changed` so any open window's data view
+/// re-fetches its now-empty state.
+#[tauri::command]
+pub async fn cmd_reset_database(state: State<'_, AppState>) -> Result<()> {
+    state.db.wipe_data()?;
+    // Re-seed the static catalogs (idempotent — uses INSERT OR REPLACE).
+    crate::catalog::load_all(&state.db)?;
+    emit_pinned_changed(&state.app_handle);
+    Ok(())
+}
+
 // ============================================================================
 // Smart Legendary Selector (recipe walker, data/legendary_recipes.json)
 // ============================================================================

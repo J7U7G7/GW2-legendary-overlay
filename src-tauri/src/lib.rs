@@ -88,6 +88,7 @@ pub fn run() {
             commands::cmd_delete_todo,
             commands::cmd_list_builds,
             commands::cmd_legendary_progress,
+            commands::cmd_reset_database,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

@@ -36,6 +36,38 @@ impl Db {
         f(&guard)
     }
 
+    /// Wipe every *data* table while preserving schema, `_migrations`, and
+    /// `settings` (which holds the encrypted API key + user preferences).
+    /// Curated catalog tables (`legendary_collections` /
+    /// `legendary_collection_members`) are repopulated by the catalog loader
+    /// at startup, so wiping them is safe — they refill on next launch.
+    pub fn wipe_data(&self) -> Result<()> {
+        const DATA_TABLES: &[&str] = &[
+            "achievements",
+            "account_progress",
+            "daily_assignments",
+            "wizardsvault",
+            "achievement_metadata",
+            "pinned_achievements",
+            "legendary_collection_members",
+            "legendary_collections",
+            "pinned_bosses",
+            "items_cache",
+            "account_items",
+            "todos",
+            "currencies",
+            "account_currencies",
+        ];
+        self.with_conn(|c| {
+            let tx = c.unchecked_transaction()?;
+            for table in DATA_TABLES {
+                tx.execute(&format!("DELETE FROM {table}"), [])?;
+            }
+            tx.commit()?;
+            Ok(())
+        })
+    }
+
     pub fn set_setting(&self, key: &str, value: &str) -> Result<()> {
         self.with_conn(|c| {
             c.execute(
