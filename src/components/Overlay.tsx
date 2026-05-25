@@ -55,21 +55,26 @@ export function Overlay() {
   const hotkeys = useSettingsStore((s) => s.hotkeys);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { collapsed, toggle: toggleCollapse } = useCollapse();
+  const [appVersion, setAppVersion] = useState<string>("");
 
   useEffect(() => {
     void checkApiKey();
     void loadSettings();
+    void api
+      .appVersion()
+      .then(setAppVersion)
+      .catch(() => setAppVersion(""));
   }, [checkApiKey, loadSettings]);
 
   useHotkeys();
   useCrossWindowSync();
 
   const hasUsableKey = apiKeyStatus !== null && apiKeyStatus.permissions_ok;
-  // First-launch flash guard: apiKeyStatus starts at null (initial) AND the
-  // check is in flight. We must NOT show ApiKeySetup during this ~1s window
-  // because the user already had a valid key stored — they'd see the setup
-  // screen briefly, panic, re-enter, and clobber their own stored key.
-  const isCheckingInitial = apiKeyStatus === null && status === "checking";
+  // First-launch flash guard: show Loading until checkApiKey has run at
+  // least once (success or error). Without this the user sees ApiKeySetup
+  // for the ~1s async check, panics, re-types their key, and clobbers the
+  // perfectly-good stored value.
+  const apiKeyChecked = useAppStore((s) => s.apiKeyChecked);
 
   return (
     <main
@@ -95,7 +100,7 @@ export function Overlay() {
 
       {collapsed ? null : settingsOpen ? (
         <SettingsPanel onClose={() => setSettingsOpen(false)} />
-      ) : isCheckingInitial ? (
+      ) : !apiKeyChecked ? (
         <div className="flex-1 flex items-center justify-center text-xs opacity-50">
           <span className="inline-block animate-spin mr-2">⟳</span>
           Loading…
@@ -123,10 +128,10 @@ export function Overlay() {
           <footer className="px-3 py-1 text-[10px] opacity-50 border-t border-white/10 font-mono shrink-0 flex items-center justify-between gap-3">
             {summary ? (
               <span>
-                {summary.account_done}/{summary.account_tracked} done · {summary.points_earned} AP
+                {summary.account_done}/{summary.account_tracked} done · {summary.points_earned} AP{appVersion ? ` · v${appVersion}` : ""}
               </span>
             ) : (
-              <span />
+              <span>{appVersion ? `v${appVersion}` : ""}</span>
             )}
             <span title="Hotkeys (remap in Settings)" className="opacity-70">
               {hotkeys.toggle_visibility} hide · {hotkeys.toggle_clickthrough} c-through ·{" "}

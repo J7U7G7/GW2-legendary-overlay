@@ -35,7 +35,12 @@ export function UpdatePrompt() {
         const update = await check();
         if (cancelled) return;
         if (update) {
+          console.info(
+            `[updater] check: current=${update.currentVersion} available=${update.version}`,
+          );
           setPending(update);
+        } else {
+          console.info("[updater] check: no update available");
         }
       } catch (e) {
         // Network blip, endpoint down, etc. — silent. The user can
@@ -92,7 +97,9 @@ export function UpdatePrompt() {
       <span>⬆️</span>
       <span className="flex-1 truncate">
         <span className="font-semibold">v{pending.version}</span>{" "}
-        <span className="opacity-70">available</span>
+        <span className="opacity-70">
+          available (you have v{pending.currentVersion})
+        </span>
       </span>
       {phase === "idle" && (
         <>

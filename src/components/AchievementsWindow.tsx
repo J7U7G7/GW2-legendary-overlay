@@ -9,6 +9,7 @@ import { AchievementsView } from "./PinnedPanel";
 
 export function AchievementsWindow() {
   const apiKeyStatus = useAppStore((s) => s.apiKeyStatus);
+  const apiKeyChecked = useAppStore((s) => s.apiKeyChecked);
   const checkApiKey = useAppStore((s) => s.checkApiKey);
   const loadSettings = useSettingsStore((s) => s.load);
   const { collapsed, toggle: toggleCollapse } = useCollapse();
@@ -64,7 +65,12 @@ export function AchievementsWindow() {
       </header>
       {!collapsed && (
         <div className="ui-zoom flex-1 flex flex-col overflow-hidden">
-          {apiKeyStatus ? (
+          {!apiKeyChecked ? (
+            <div className="flex-1 flex items-center justify-center text-xs opacity-50">
+              <span className="inline-block animate-spin mr-2">⟳</span>
+              Loading…
+            </div>
+          ) : apiKeyStatus ? (
             <AchievementsView />
           ) : (
             <div className="flex-1 flex items-center justify-center text-xs opacity-60 px-4 text-center">

@@ -23,6 +23,11 @@ export type ViewKey =
 
 type AppStore = {
   apiKeyStatus: ApiKeyStatus | null;
+  /** True once `checkApiKey()` has run at least once (success or failure).
+   * UI must gate the ApiKeySetup / no-key fallback on this — otherwise users
+   * see the setup screen flash during the ~1s async check and re-type their
+   * key, clobbering the perfectly-good stored value. */
+  apiKeyChecked: boolean;
   status: LoadingState;
   errorMessage: string | null;
   view: ViewKey;
@@ -54,6 +59,7 @@ type AppStore = {
 
 export const useAppStore = create<AppStore>((set, get) => ({
   apiKeyStatus: null,
+  apiKeyChecked: false,
   status: "idle",
   errorMessage: null,
   view: "events",
@@ -81,7 +87,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ status: "checking", errorMessage: null });
     try {
       const status = await api.checkApiKey();
-      set({ apiKeyStatus: status, status: "idle" });
+      set({ apiKeyStatus: status, status: "idle", apiKeyChecked: true });
       if (status && status.permissions_ok) {
         await get().refresh();
         try {
@@ -95,11 +101,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       // Crucially: do NOT clobber apiKeyStatus here. A transient backend
       // error (DPAPI/network/tokeninfo blip) must not kick the user to
       // the ApiKeySetup screen. Only an explicit `null` from
-      // cmd_check_api_key means "no key configured". On first launch
-      // apiKeyStatus is null anyway, so the worst case is the user has
-      // to wait for the next refresh — better than a wrong setup prompt.
+      // cmd_check_api_key means "no key configured". We DO mark the check
+      // as completed so the Loading spinner can clear (else it spins
+      // forever on a permanently broken check).
       console.error("checkApiKey failed:", e);
-      set({ status: "error", errorMessage: String(e) });
+      set({ status: "error", errorMessage: String(e), apiKeyChecked: true });
     }
   },
 
