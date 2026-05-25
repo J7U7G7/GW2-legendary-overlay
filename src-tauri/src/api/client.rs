@@ -29,12 +29,27 @@ struct Bucket {
 
 impl Bucket {
     fn new() -> Self {
-        Self { tokens: RATE_CAPACITY, last_refill: Instant::now() }
+        Self::with_origin(Instant::now())
+    }
+
+    /// Testable constructor: lets the caller anchor `last_refill` to a known
+    /// instant. Production callers use `new()` which anchors to the current
+    /// instant.
+    fn with_origin(origin: Instant) -> Self {
+        Self { tokens: RATE_CAPACITY, last_refill: origin }
     }
 
     fn try_take(&mut self) -> std::result::Result<(), Duration> {
-        let now = Instant::now();
-        let elapsed = now.duration_since(self.last_refill).as_secs_f64();
+        self.try_take_at(Instant::now())
+    }
+
+    /// Time-injectable variant of `try_take`. Production code goes through
+    /// `try_take` which calls `Instant::now()` itself; tests pass synthetic
+    /// instants derived from a fixed origin so they don't depend on the
+    /// host's monotonic-clock origin (Windows runners may underflow when
+    /// subtracting a Duration from `Instant::now()` shortly after boot).
+    fn try_take_at(&mut self, now: Instant) -> std::result::Result<(), Duration> {
+        let elapsed = now.saturating_duration_since(self.last_refill).as_secs_f64();
         self.tokens = (self.tokens + elapsed * RATE_REFILL_PER_SEC).min(RATE_CAPACITY);
         self.last_refill = now;
         if self.tokens >= 1.0 {
@@ -163,26 +178,39 @@ mod tests {
 
     #[test]
     fn bucket_refills_proportionally() {
-        let mut b = Bucket::new();
-        // Drain
-        while b.try_take().is_ok() {}
-        // Rewind last_refill to simulate elapsed time
-        b.last_refill = Instant::now() - Duration::from_secs(2);
-        // 2s at 5 tok/s = 10 new tokens available
-        for _ in 0..10 {
-            assert!(b.try_take().is_ok());
+        // Synthesise the timeline forward from a fixed origin so we never
+        // subtract from `Instant::now()` (which can underflow on freshly-
+        // booted machines, e.g. Windows CI runners).
+        let t0 = Instant::now();
+        let mut b = Bucket::with_origin(t0);
+        // Drain — all 300 tokens taken at t0.
+        for _ in 0..(RATE_CAPACITY as usize) {
+            assert!(b.try_take_at(t0).is_ok());
         }
-        assert!(b.try_take().is_err());
+        assert!(b.try_take_at(t0).is_err());
+
+        // Two seconds later → 10 fresh tokens.
+        let t1 = t0 + Duration::from_secs(2);
+        for _ in 0..10 {
+            assert!(b.try_take_at(t1).is_ok());
+        }
+        assert!(b.try_take_at(t1).is_err());
     }
 
     #[test]
     fn bucket_caps_at_capacity() {
-        let mut b = Bucket::new();
-        // Rewind a long time; capacity must not exceed RATE_CAPACITY
-        b.last_refill = Instant::now() - Duration::from_secs(3600);
+        let t0 = Instant::now();
+        let mut b = Bucket::with_origin(t0);
+        // Drain at t0.
         for _ in 0..(RATE_CAPACITY as usize) {
-            assert!(b.try_take().is_ok());
+            assert!(b.try_take_at(t0).is_ok());
         }
-        assert!(b.try_take().is_err());
+        // Jump forward an hour. Naively, 3600s × 5 tok/s = 18000 tokens, but
+        // the bucket must cap at RATE_CAPACITY.
+        let t_future = t0 + Duration::from_secs(3600);
+        for _ in 0..(RATE_CAPACITY as usize) {
+            assert!(b.try_take_at(t_future).is_ok());
+        }
+        assert!(b.try_take_at(t_future).is_err());
     }
 }
