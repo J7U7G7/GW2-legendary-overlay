@@ -1,0 +1,38 @@
+name: 💡 Feature request
+description: Something that would make the overlay more useful.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the problem?
+      description: |
+        What are you trying to do that's currently hard or impossible? Skip
+        directly to the proposed solution only if there's no underlying
+        problem (e.g. "just polish this UI affordance").
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would this work? UI sketch / data flow / specific behaviour.
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing tools (BlishHUD, ArcDPS, etc.) or workarounds you've tried.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      placeholder: "0.1.0"
+    validations:
+      required: false

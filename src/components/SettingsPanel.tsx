@@ -134,6 +134,59 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     });
   }, []);
 
+  // ---- Diagnostics + feedback (logs + GitHub issue pre-fills) ----
+  const [appVersion, setAppVersion] = useState<string>("");
+  useEffect(() => {
+    void api
+      .appVersion()
+      .then(setAppVersion)
+      .catch(() => setAppVersion(""));
+  }, []);
+  const [copyStatus, setCopyStatus] = useState<"" | "copied" | "error">("");
+  const onCopyLogs = async () => {
+    try {
+      const txt = await api.recentLogs(200);
+      await navigator.clipboard.writeText(txt);
+      setCopyStatus("copied");
+      window.setTimeout(() => setCopyStatus(""), 2000);
+    } catch (e) {
+      console.warn("copy logs failed:", e);
+      setCopyStatus("error");
+    }
+  };
+  const onOpenLogs = () => {
+    void api.openLogsFolder().catch((e) => console.warn("open logs failed:", e));
+  };
+  const onReportBug = () => {
+    const ua = navigator.userAgent;
+    const body = [
+      `<!-- Auto-filled by the app. Edit freely. -->`,
+      ``,
+      `**App version:** ${appVersion || "(unknown)"}`,
+      `**User agent:** ${ua}`,
+      ``,
+      `### What happened?`,
+      `(describe)`,
+      ``,
+      `### Recent logs`,
+      `In the app: Settings → Diagnostics → Copy last logs → paste here.`,
+      ``,
+    ].join("\n");
+    const url
+      = "https://github.com/J7U7G7/GW2-legendary-overlay/issues/new"
+        + "?template=bug_report.yml"
+        + `&version=${encodeURIComponent(appVersion)}`
+        + `&body=${encodeURIComponent(body)}`;
+    window.open(url, "_blank", "noopener");
+  };
+  const onFeatureRequest = () => {
+    const url
+      = "https://github.com/J7U7G7/GW2-legendary-overlay/issues/new"
+        + "?template=feature_request.yml"
+        + `&version=${encodeURIComponent(appVersion)}`;
+    window.open(url, "_blank", "noopener");
+  };
+
   const onChangeLead = (minutes: number) => {
     setNotifLead(minutes);
     void api.setNotificationLead(minutes).catch((e) => console.warn(e));
@@ -298,6 +351,58 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           Click a combo, press the new keys. Need at least one modifier
           (Ctrl/Alt/Shift). Esc cancels. Re-binds immediately.
         </p>
+      </div>
+
+      <div className="border-t border-white/10 pt-3 flex flex-col gap-2">
+        <h2 className="font-semibold">Diagnostics &amp; feedback</h2>
+        <p className="text-[10px] opacity-70">
+          Logs are written daily to your AppData. The 'Copy last logs' button
+          grabs the last 200 lines for pasting into a bug report.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={onOpenLogs}
+            className="px-2 py-1 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+          >
+            📂 Open logs folder
+          </button>
+          <button
+            type="button"
+            onClick={() => void onCopyLogs()}
+            className={
+              copyStatus === "copied"
+                ? "px-2 py-1 text-[10px] bg-[var(--accent-color)] text-black rounded"
+                : "px-2 py-1 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+            }
+          >
+            {copyStatus === "copied" ? "✓ Copied" : "📋 Copy last logs"}
+          </button>
+          <button
+            type="button"
+            onClick={onReportBug}
+            className="px-2 py-1 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+          >
+            🐛 Report bug
+          </button>
+          <button
+            type="button"
+            onClick={onFeatureRequest}
+            className="px-2 py-1 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+          >
+            💡 Feature request
+          </button>
+        </div>
+        {copyStatus === "error" && (
+          <p className="text-[10px] text-red-300">
+            Could not copy. Use 'Open logs folder' instead.
+          </p>
+        )}
+        {appVersion && (
+          <p className="text-[10px] opacity-50 font-mono">
+            Version: {appVersion}
+          </p>
+        )}
       </div>
 
       <div className="border-t border-red-400/30 pt-3 flex flex-col gap-2">

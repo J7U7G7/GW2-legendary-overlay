@@ -209,6 +209,68 @@ pub async fn cmd_save_state_and_quit(app: tauri::AppHandle) -> Result<()> {
     Ok(())
 }
 
+// ============================================================================
+// Diagnostics — logs + version
+// ============================================================================
+
+fn logs_dir_path() -> std::path::PathBuf {
+    let base = std::env::var("APPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    base.join("com.tripleseptconsulting.gw2overlay").join("logs")
+}
+
+#[tauri::command]
+pub async fn cmd_open_logs_folder(app: tauri::AppHandle) -> Result<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = logs_dir_path();
+    app.opener()
+        .open_path(path.to_string_lossy().to_string(), None::<&str>)
+        .map_err(|e| AppError::Other(format!("open logs folder: {e}")))?;
+    Ok(())
+}
+
+/// Return the most recent `max_lines` log lines from today's rolling file
+/// (falls back to the latest yesterday file if today's hasn't been created
+/// yet). Used by the 'Copy last errors' button in Settings — the user
+/// pastes the result into a bug report.
+#[tauri::command]
+pub async fn cmd_recent_logs(max_lines: Option<usize>) -> Result<String> {
+    let dir = logs_dir_path();
+    let cap = max_lines.unwrap_or(100).min(2000);
+
+    // Find the most recent file in the logs dir matching gw2-overlay.log.*
+    let mut candidates: Vec<(std::time::SystemTime, std::path::PathBuf)> = std::fs::read_dir(&dir)
+        .map_err(|e| AppError::Other(format!("read logs dir: {e}")))?
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .starts_with("gw2-overlay.log")
+        })
+        .filter_map(|e| {
+            let meta = e.metadata().ok()?;
+            let mtime = meta.modified().ok()?;
+            Some((mtime, e.path()))
+        })
+        .collect();
+    candidates.sort_by_key(|(t, _)| *t);
+    let Some((_, latest)) = candidates.into_iter().next_back() else {
+        return Ok("(no log files yet)".to_string());
+    };
+
+    let content = std::fs::read_to_string(&latest)
+        .map_err(|e| AppError::Other(format!("read log file: {e}")))?;
+    let lines: Vec<&str> = content.lines().collect();
+    let start = lines.len().saturating_sub(cap);
+    Ok(lines[start..].join("\n"))
+}
+
+#[tauri::command]
+pub fn cmd_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
 /// Wipe every data table (achievements, items, todos, wallet, etc.) while
 /// preserving the API key + user preferences. Re-seeds the curated catalogs
 /// (legendary_collections, boss links) so the Catalog tab isn't empty after

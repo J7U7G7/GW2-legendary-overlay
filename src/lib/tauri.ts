@@ -66,4 +66,8 @@ export const api = {
     invoke<Build[]>("cmd_list_builds", { profession: profession ?? null }),
   legendaryProgress: () => invoke<LegendaryProgress[]>("cmd_legendary_progress"),
   resetDatabase: () => invoke<void>("cmd_reset_database"),
+  openLogsFolder: () => invoke<void>("cmd_open_logs_folder"),
+  recentLogs: (maxLines = 100) =>
+    invoke<string>("cmd_recent_logs", { maxLines }),
+  appVersion: () => invoke<string>("cmd_app_version"),
 };

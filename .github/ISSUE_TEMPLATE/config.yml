@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/J7U7G7/GW2-legendary-overlay#readme
+    about: Quick-start, architecture, and troubleshooting tips.
+  - name: 🗺️ Roadmap
+    url: https://github.com/J7U7G7/GW2-legendary-overlay/blob/main/docs/ROADMAP.md
+    about: What's planned, shipped, and intentionally not built.
