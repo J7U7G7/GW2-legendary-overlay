@@ -160,3 +160,12 @@ re-derives them:
 - **Default-open boss groups** — closing the body of a Tequatl card
   whose achievements were all done made it look "deleted". Cards now
   default-open whenever they have any linked achievements.
+
+- **Zombie table `daily_assignments`** (schema v1, never dropped) —
+  was used by the original spec to mirror `/v2/achievements/daily`.
+  That endpoint has returned 503 since the Wizard's Vault rollout
+  (Pivot 1), so the table has zero readers and zero writers in the
+  current code. Can't drop without editing past migration v1, so it
+  stays as harmless empty schema. Audit grep target: `daily_assignments`
+  appears only inside its own `CREATE TABLE` string + the
+  `fresh_migration_creates_all_tables` test list.

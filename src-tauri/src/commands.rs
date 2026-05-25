@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use chrono::Utc;
 use rusqlite::params;
 use serde::Serialize;
 use tauri::{Emitter, State};
@@ -211,7 +210,7 @@ pub async fn cmd_save_state_and_quit(app: tauri::AppHandle) -> Result<()> {
 }
 
 // ============================================================================
-// Builds Manager (static curated catalog from data/builds.json)
+// Smart Legendary Selector (recipe walker, data/legendary_recipes.json)
 // ============================================================================
 
 #[tauri::command]
@@ -664,14 +663,6 @@ pub struct ProgressSummary {
     pub account_tracked: i64,
     pub account_done: i64,
     pub points_earned: i64,
-}
-
-#[tauri::command]
-pub async fn cmd_get_upcoming_events(
-    state: State<'_, AppState>,
-    horizon_minutes: i64,
-) -> Result<Vec<UpcomingEvent>> {
-    Ok(all_upcoming(&state.schedule, Utc::now(), horizon_minutes))
 }
 
 #[tauri::command]

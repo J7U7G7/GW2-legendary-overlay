@@ -12,10 +12,7 @@ import type {
 } from "../types/gw2";
 
 type LoadingState = "idle" | "checking" | "syncing" | "error";
-/// `pinned` is kept for back-compat with old persisted state; the active
-/// tabs in the main window are events/catalog/search/wv.
 export type ViewKey =
-  | "pinned"
   | "events"
   | "catalog"
   | "search"

@@ -64,14 +64,6 @@ impl ApiClient {
         Ok(Self { http, key, bucket: Mutex::new(Bucket::new()) })
     }
 
-    pub fn set_key(&mut self, key: ApiKey) {
-        self.key = Some(key);
-    }
-
-    pub fn has_key(&self) -> bool {
-        self.key.is_some()
-    }
-
     async fn acquire_token(&self) {
         loop {
             let wait = {

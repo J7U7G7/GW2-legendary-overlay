@@ -1,9 +1,5 @@
 import { useEffect } from "react";
-import {
-  isRegistered,
-  register,
-  unregisterAll,
-} from "@tauri-apps/plugin-global-shortcut";
+import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
@@ -76,14 +72,6 @@ export function useHotkeys() {
       });
     };
   }, []);
-}
-
-export function getClickThroughState(): boolean {
-  return clickThroughOn;
-}
-
-export async function isHotkeyRegistered(shortcut: string): Promise<boolean> {
-  return isRegistered(shortcut);
 }
 
 export const HOTKEY_LABELS = {

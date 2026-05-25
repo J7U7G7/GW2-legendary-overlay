@@ -46,14 +46,10 @@ export function Overlay() {
   const view = useAppStore((s) => s.view);
   const wv = useAppStore((s) => s.wizardsVault);
   const summary = useAppStore((s) => s.summary);
-  const pinned = useAppStore((s) => s.pinned);
   const checkApiKey = useAppStore((s) => s.checkApiKey);
   const triggerSync = useAppStore((s) => s.triggerSync);
   const clearApiKey = useAppStore((s) => s.clearApiKey);
   const setView = useAppStore((s) => s.setView);
-  const pinnedCount =
-    (pinned?.boss_groups.length ?? 0) + (pinned?.standalone.length ?? 0);
-
   const loadSettings = useSettingsStore((s) => s.load);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { collapsed, toggle: toggleCollapse } = useCollapse();
@@ -94,7 +90,7 @@ export function Overlay() {
         <ApiKeySetup />
       ) : (
         <>
-          <Tabs current={view} onSelect={setView} pinnedCount={pinnedCount} />
+          <Tabs current={view} onSelect={setView} />
           <div className="ui-zoom flex-1 flex flex-col overflow-hidden">
             {view === "events" && <EventsTab />}
             {view === "catalog" && <CatalogView />}
@@ -238,11 +234,9 @@ function Header(props: {
 function Tabs({
   current,
   onSelect,
-  pinnedCount,
 }: {
   current: ViewKey;
   onSelect: (v: ViewKey) => void;
-  pinnedCount: number;
 }) {
   return (
     <nav className="flex border-b border-white/10 text-xs shrink-0 overflow-x-auto whitespace-nowrap">
@@ -260,9 +254,6 @@ function Tabs({
             }`}
           >
             {t.label}
-            {t.id === "pinned" && pinnedCount > 0 && (
-              <span className="ml-1 text-[10px] opacity-70">({pinnedCount})</span>
-            )}
           </button>
         );
       })}

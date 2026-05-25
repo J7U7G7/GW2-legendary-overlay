@@ -10,7 +10,6 @@ pub struct Db {
     conn: Mutex<Connection>,
 }
 
-#[allow(dead_code)] // public infrastructure used in upcoming sync/api steps
 impl Db {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let conn = Connection::open(path)?;

@@ -58,7 +58,6 @@ pub fn run() {
             commands::cmd_check_api_key,
             commands::cmd_clear_api_key,
             commands::cmd_sync_now,
-            commands::cmd_get_upcoming_events,
             commands::cmd_get_wizardsvault_state,
             commands::cmd_get_progress_summary,
             commands::cmd_search_achievements,

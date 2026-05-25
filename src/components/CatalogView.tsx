@@ -184,7 +184,7 @@ function CollectionCard({
                 {m.pinned ? (
                   <span
                     className="px-1.5 py-0.5 text-[10px] text-[var(--accent-color)] cursor-default"
-                    title="Already pinned. Unpin from the Pinned tab."
+                    title="Already pinned. Unpin from the Achievements window."
                   >
                     ✓ Pinned
                   </span>

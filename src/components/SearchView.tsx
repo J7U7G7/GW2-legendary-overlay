@@ -52,7 +52,7 @@ export function SearchView() {
             {r.pinned ? (
               <span
                 className="px-2 py-0.5 text-[10px] text-[var(--accent-color)] cursor-default"
-                title="Already pinned. Unpin from the Pinned tab."
+                title="Already pinned. Unpin from the Achievements window."
               >
                 ✓ Pinned
               </span>
