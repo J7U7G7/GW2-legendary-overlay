@@ -53,6 +53,7 @@ impl Db {
             "legendary_collections",
             "pinned_bosses",
             "items_cache",
+            "skins_cache",
             "account_items",
             "todos",
             "currencies",

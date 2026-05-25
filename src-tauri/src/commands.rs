@@ -1460,7 +1460,7 @@ fn load_pinned_achievement_views(
     weights: &Weights,
     now: chrono::DateTime<chrono::Utc>,
 ) -> Result<Vec<PinnedItemView>> {
-    let item_cache = load_item_cache_for_pinned(db)?;
+    let (item_cache, skin_cache) = load_resolution_caches(db)?;
     let rows = db.with_conn(|c| {
         let mut stmt = c.prepare(
             "SELECT pin.achievement_id, pin.collection_key,
@@ -1524,7 +1524,7 @@ fn load_pinned_achievement_views(
                 .associated_boss
                 .as_ref()
                 .and_then(|boss| upcoming.iter().find(|e| &e.id == boss).cloned());
-            let bits = parse_bits(&r.bits_def_json, &r.bits_done_json, &item_cache);
+            let bits = parse_bits(&r.bits_def_json, &r.bits_done_json, &item_cache, &skin_cache);
             PinnedItemView {
                 id: r.id,
                 name: r.name.unwrap_or_else(|| format!("Achievement #{}", r.id)),
@@ -1559,7 +1559,7 @@ fn load_boss_linked_achievements(
     now: chrono::DateTime<chrono::Utc>,
     exclude: &std::collections::HashSet<u32>,
 ) -> Result<Vec<PinnedItemView>> {
-    let item_cache = load_item_cache_for_pinned(db)?;
+    let (item_cache, skin_cache) = load_resolution_caches(db)?;
     let rows = db.with_conn(|c| {
         let mut stmt = c.prepare(
             "SELECT a.id, a.name, a.description, a.requirement, COALESCE(a.points, 0),
@@ -1617,7 +1617,7 @@ fn load_boss_linked_achievements(
         };
         let s = score_item(&scoreable, upcoming, weights, now);
         let next_event = upcoming.iter().find(|e| e.id == boss_id).cloned();
-        let bits = parse_bits(&bits_def, &bits_done, &item_cache);
+        let bits = parse_bits(&bits_def, &bits_done, &item_cache, &skin_cache);
         views.push(PinnedItemView {
             id,
             name: name.unwrap_or_else(|| format!("Achievement #{id}")),
@@ -1639,58 +1639,89 @@ fn load_boss_linked_achievements(
     Ok(views)
 }
 
-/// Collect every Item id referenced by a pinned achievement's bits and
-/// pull its cached entry. Returns the lookup table consumed by `parse_bits`.
-fn load_item_cache_for_pinned(
+/// Collect every Item / Skin id referenced by a pinned achievement's bits
+/// and pull each from its cache. Returns both lookup tables; `parse_bits`
+/// consumes them to resolve names. Skins live in their own registry behind
+/// `/v2/skins` (used by Obsidian Armor and friends) — without the skin
+/// cache the UI shows raw `Skin #12078`.
+fn load_resolution_caches(
     db: &Db,
-) -> Result<std::collections::HashMap<u32, crate::sync::items::CachedItem>> {
-    let ids = db.with_conn(|c| {
+) -> Result<(
+    std::collections::HashMap<u32, crate::sync::items::CachedItem>,
+    std::collections::HashMap<u32, crate::sync::skins::CachedSkin>,
+)> {
+    let (item_ids, skin_ids) = db.with_conn(|c| {
         let mut stmt = c.prepare(
             "SELECT a.bits FROM pinned_achievements pin
              JOIN achievements a ON a.id = pin.achievement_id
              WHERE a.bits IS NOT NULL",
         )?;
         let mut rows = stmt.query([])?;
-        let mut ids: std::collections::HashSet<u32> = std::collections::HashSet::new();
+        let mut items: std::collections::HashSet<u32> = std::collections::HashSet::new();
+        let mut skins: std::collections::HashSet<u32> = std::collections::HashSet::new();
         while let Some(row) = rows.next()? {
             let s: String = row.get(0)?;
             if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(&s) {
                 for bit in arr {
                     let kind = bit.get("type").and_then(|v| v.as_str()).unwrap_or("");
-                    if kind == "Item" {
-                        if let Some(id) = bit.get("id").and_then(|v| v.as_u64()) {
-                            ids.insert(id as u32);
+                    if let Some(id) = bit.get("id").and_then(|v| v.as_u64()) {
+                        match kind {
+                            "Item" => {
+                                items.insert(id as u32);
+                            }
+                            "Skin" => {
+                                skins.insert(id as u32);
+                            }
+                            _ => {}
                         }
                     }
                 }
             }
         }
-        Ok(ids.into_iter().collect::<Vec<_>>())
+        Ok((
+            items.into_iter().collect::<Vec<_>>(),
+            skins.into_iter().collect::<Vec<_>>(),
+        ))
     })?;
-    crate::sync::items::lookup_items(db, &ids)
+    let items_cache = crate::sync::items::lookup_items(db, &item_ids)?;
+    let skins_cache = crate::sync::skins::lookup_skins(db, &skin_ids)?;
+    Ok((items_cache, skins_cache))
 }
 
-/// Fetch any Item-typed bit referenced by pinned achievements that we don't
-/// yet have in the items cache. Called by the frontend after a pin/unpin so
-/// the next get_pinned_view shows real item names instead of `Item #X`.
+/// Fetch any Item / Skin bit referenced by pinned achievements that we don't
+/// yet have cached. Called by the frontend after a pin/unpin so the next
+/// get_pinned_view shows real names instead of `Item #X` / `Skin #Y`.
 ///
-/// Returns the number of items that were *requested* (not just the ones the
-/// API actually returned) so the frontend can always know a warm pass
-/// happened and trigger one final refresh.
+/// Returns the total number of items+skins *requested* (not just what the
+/// API returned) so the frontend can always know a warm pass happened and
+/// trigger one final refresh.
 #[tauri::command]
 pub async fn cmd_warm_item_cache(state: State<'_, AppState>) -> Result<usize> {
-    let missing = crate::sync::items::find_missing_item_ids(&state.db)?;
-    if missing.is_empty() {
+    let missing_items = crate::sync::items::find_missing_item_ids(&state.db)?;
+    let missing_skins = crate::sync::skins::find_missing_skin_ids(&state.db)?;
+    let total = missing_items.len() + missing_skins.len();
+    if total == 0 {
         tracing::debug!("warm_item_cache: nothing to fetch");
         return Ok(0);
     }
-    tracing::info!(count = missing.len(), "warm_item_cache: fetching items");
+    tracing::info!(
+        items = missing_items.len(),
+        skins = missing_skins.len(),
+        "warm_item_cache: fetching"
+    );
     let key = load_api_key(&state.db)?.ok_or(AppError::NoApiKey)?;
     let client = ApiClient::new(Some(key))?;
-    let fetched =
-        crate::sync::items::fetch_and_cache_items(&client, &state.db, &missing).await?;
-    tracing::info!(requested = missing.len(), fetched, "warm_item_cache: done");
-    Ok(missing.len())
+    let fetched_items =
+        crate::sync::items::fetch_and_cache_items(&client, &state.db, &missing_items).await?;
+    let fetched_skins =
+        crate::sync::skins::fetch_and_cache_skins(&client, &state.db, &missing_skins).await?;
+    tracing::info!(
+        requested = total,
+        items_fetched = fetched_items,
+        skins_fetched = fetched_skins,
+        "warm_item_cache: done"
+    );
+    Ok(total)
 }
 
 /// Parse the cached `achievements.bits` JSON array against the user's
@@ -1701,6 +1732,7 @@ fn parse_bits(
     def_json: &Option<String>,
     done_json: &Option<String>,
     item_cache: &std::collections::HashMap<u32, crate::sync::items::CachedItem>,
+    skin_cache: &std::collections::HashMap<u32, crate::sync::skins::CachedSkin>,
 ) -> Vec<PinnedBitView> {
     let Some(def_str) = def_json else { return vec![] };
     let defs: Vec<serde_json::Value> = match serde_json::from_str(def_str) {
@@ -1728,21 +1760,29 @@ fn parse_bits(
                 .and_then(|v| v.as_str())
                 .filter(|s| !s.is_empty())
                 .map(|s| s.to_string());
-            let (resolved_name, resolved_description, resolved_rarity) =
-                if kind == "Item" {
-                    ref_id
-                        .and_then(|id| item_cache.get(&(id as u32)))
-                        .map(|it| {
-                            (
-                                Some(it.name.clone()),
-                                it.description.clone(),
-                                it.rarity.clone(),
-                            )
-                        })
-                        .unwrap_or((None, None, None))
-                } else {
-                    (None, None, None)
-                };
+            let (resolved_name, resolved_description, resolved_rarity) = match kind.as_str() {
+                "Item" => ref_id
+                    .and_then(|id| item_cache.get(&(id as u32)))
+                    .map(|it| {
+                        (
+                            Some(it.name.clone()),
+                            it.description.clone(),
+                            it.rarity.clone(),
+                        )
+                    })
+                    .unwrap_or((None, None, None)),
+                "Skin" => ref_id
+                    .and_then(|id| skin_cache.get(&(id as u32)))
+                    .map(|sk| {
+                        (
+                            Some(sk.name.clone()),
+                            sk.description.clone(),
+                            sk.rarity.clone(),
+                        )
+                    })
+                    .unwrap_or((None, None, None)),
+                _ => (None, None, None),
+            };
             PinnedBitView {
                 index: idx as u32,
                 kind,

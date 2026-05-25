@@ -182,6 +182,30 @@ pub async fn get_items_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<ItemDetai
 }
 
 #[derive(Debug, Deserialize)]
+pub struct SkinDetail {
+    pub id: u32,
+    pub name: String,
+    #[serde(default, rename = "type")]
+    pub kind: Option<String>,
+    #[serde(default)]
+    pub rarity: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+#[allow(dead_code)]
+pub async fn get_skins_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<SkinDetail>> {
+    if ids.is_empty() {
+        return Ok(vec![]);
+    }
+    let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+    // FR for consistency with /v2/items.
+    c.get_json(&format!("/v2/skins?ids={ids_csv}&lang=fr")).await
+}
+
+#[derive(Debug, Deserialize)]
 pub struct InventorySlot {
     pub id: u32,
     pub count: u32,

@@ -18,6 +18,8 @@ const MIGRATIONS: &[&str] = &[
     TODOS_SCHEMA,
     // v7: wallet currencies (account values + cached definitions)
     WALLET_SCHEMA,
+    // v8: skins cache (resolves Skin-typed bits — e.g. Obsidian Armor steps)
+    SKINS_CACHE_SCHEMA,
 ];
 
 const INITIAL_SCHEMA: &str = r#"
@@ -160,6 +162,18 @@ const TODOS_SCHEMA: &str = r#"
     CREATE INDEX idx_todos_period ON todos(period);
 "#;
 
+const SKINS_CACHE_SCHEMA: &str = r#"
+    CREATE TABLE skins_cache (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT,
+        rarity TEXT,
+        description TEXT,
+        icon TEXT,
+        last_synced TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+"#;
+
 const WALLET_SCHEMA: &str = r#"
     CREATE TABLE currencies (
         id INTEGER PRIMARY KEY,
@@ -236,6 +250,7 @@ mod tests {
             "pinned_achievements",
             "pinned_bosses",
             "settings",
+            "skins_cache",
             "todos",
             "wizardsvault",
         ] {
