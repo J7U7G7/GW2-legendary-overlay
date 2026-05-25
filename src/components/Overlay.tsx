@@ -75,6 +75,25 @@ export function Overlay() {
   // for the ~1s async check, panics, re-types their key, and clobbers the
   // perfectly-good stored value.
   const apiKeyChecked = useAppStore((s) => s.apiKeyChecked);
+  // Diagnostic: log which render branch is being chosen so we can
+  // correlate FE state with backend logs on production bug reports.
+  useEffect(() => {
+    const branch
+      = collapsed
+        ? "collapsed"
+        : settingsOpen
+          ? "settings"
+          : !apiKeyChecked
+            ? "loading"
+            : !hasUsableKey
+              ? "apiKeySetup"
+              : "main";
+    void api.logEvent(
+      "info",
+      "Overlay.render",
+      `branch=${branch} apiKeyChecked=${apiKeyChecked} hasUsableKey=${hasUsableKey} status=${status} apiKeyStatus=${apiKeyStatus ? `{permissions_ok=${apiKeyStatus.permissions_ok}}` : "null"}`,
+    );
+  }, [collapsed, settingsOpen, apiKeyChecked, hasUsableKey, status, apiKeyStatus]);
 
   return (
     <main

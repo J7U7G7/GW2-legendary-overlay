@@ -84,9 +84,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   async checkApiKey() {
+    void api.logEvent("info", "store.checkApiKey", "called");
     set({ status: "checking", errorMessage: null });
     try {
       const status = await api.checkApiKey();
+      void api.logEvent(
+        "info",
+        "store.checkApiKey",
+        `cmd returned: status=${status ? `{permissions_ok=${status.permissions_ok}, missing=[${status.missing.join(",")}]}` : "null"}`,
+      );
       set({ apiKeyStatus: status, status: "idle", apiKeyChecked: true });
       if (status && status.permissions_ok) {
         await get().refresh();
@@ -105,6 +111,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       // as completed so the Loading spinner can clear (else it spins
       // forever on a permanently broken check).
       console.error("checkApiKey failed:", e);
+      void api.logEvent("error", "store.checkApiKey", `threw: ${String(e)}`);
       set({ status: "error", errorMessage: String(e), apiKeyChecked: true });
     }
   },

@@ -71,4 +71,6 @@ export const api = {
     invoke<string>("cmd_recent_logs", { maxLines }),
   appVersion: () => invoke<string>("cmd_app_version"),
   resetWindowLayout: () => invoke<void>("cmd_reset_window_layout"),
+  logEvent: (level: "debug" | "info" | "warn" | "error", target: string, message: string) =>
+    invoke<void>("cmd_log_event", { level, target, message }),
 };

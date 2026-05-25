@@ -156,6 +156,7 @@ pub fn run() {
             commands::cmd_recent_logs,
             commands::cmd_app_version,
             commands::cmd_reset_window_layout,
+            commands::cmd_log_event,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

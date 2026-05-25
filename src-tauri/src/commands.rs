@@ -271,6 +271,20 @@ pub fn cmd_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// Frontend → tracing bridge. Lets the React side write to the rolling file
+/// log so we can correlate UI state with backend events when investigating
+/// production bugs that don't reproduce on dev. Level is a string; unknown
+/// values default to info.
+#[tauri::command]
+pub fn cmd_log_event(level: String, target: String, message: String) {
+    match level.as_str() {
+        "error" => tracing::error!(target: "fe", source = %target, "{message}"),
+        "warn" => tracing::warn!(target: "fe", source = %target, "{message}"),
+        "debug" => tracing::debug!(target: "fe", source = %target, "{message}"),
+        _ => tracing::info!(target: "fe", source = %target, "{message}"),
+    }
+}
+
 /// Wipe the persisted window-state file so the next launch falls back to the
 /// defaults declared in `tauri.conf.json` (centered, default sizes). Useful
 /// when a window ends up off-screen / maximized / otherwise stuck — the
