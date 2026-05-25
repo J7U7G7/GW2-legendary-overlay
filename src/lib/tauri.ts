@@ -8,6 +8,7 @@ import type {
   AppearanceSettings,
   Build,
   EventView,
+  HotkeyConfig,
   LegendaryCollection,
   LegendaryProgress,
   PinnedView,
@@ -46,6 +47,9 @@ export const api = {
   getNotificationLead: () => invoke<number>("cmd_get_notification_lead"),
   setNotificationLead: (minutes: number) =>
     invoke<void>("cmd_set_notification_lead", { minutes }),
+  getHotkeys: () => invoke<HotkeyConfig>("cmd_get_hotkeys"),
+  setHotkeys: (hotkeys: HotkeyConfig) =>
+    invoke<void>("cmd_set_hotkeys", { hotkeys }),
   syncAccountItems: () => invoke<number>("cmd_sync_account_items"),
   searchAccountItems: (query: string, limit = 30) =>
     invoke<AccountItemResult[]>("cmd_search_account_items", { query, limit }),

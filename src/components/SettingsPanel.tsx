@@ -1,14 +1,106 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api } from "../lib/tauri";
 import { useSettingsStore } from "../store/settings";
+import type { HotkeyConfig } from "../types/gw2";
+
+/**
+ * Captures a single hotkey combo via a focused input that listens for
+ * keydown events and produces the Tauri-accelerator string
+ * ("CmdOrCtrl+Shift+G"). Escape cancels. The combo must include at least
+ * one modifier (Ctrl/Cmd/Alt/Shift) plus a key — bare letters would clash
+ * with normal typing.
+ */
+function HotkeyCapture({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+}) {
+  const [capturing, setCapturing] = useState(false);
+  const [draft, setDraft] = useState<string>(value);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (!capturing) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === "Escape") {
+        setCapturing(false);
+        setDraft(value);
+        return;
+      }
+      const mods: string[] = [];
+      if (e.ctrlKey || e.metaKey) mods.push("CmdOrCtrl");
+      if (e.altKey) mods.push("Alt");
+      if (e.shiftKey) mods.push("Shift");
+      // Ignore pure modifier presses — wait until a real key joins.
+      const isModifierKey =
+        e.key === "Control"
+        || e.key === "Meta"
+        || e.key === "Alt"
+        || e.key === "Shift";
+      if (isModifierKey) return;
+      if (mods.length === 0) return; // require a modifier
+      // Tauri expects a single-character or named key. Uppercase letters.
+      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+      const combo = [...mods, key].join("+");
+      setDraft(combo);
+      onChange(combo);
+      setCapturing(false);
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [capturing, value, onChange]);
+
+  return (
+    <label className="flex items-center justify-between gap-2">
+      <span className="opacity-70 flex-1">{label}</span>
+      <div
+        ref={ref}
+        role="button"
+        tabIndex={0}
+        onClick={() => setCapturing(true)}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") {
+            e.preventDefault();
+            setCapturing(true);
+          }
+        }}
+        className={
+          capturing
+            ? "px-2 py-1 rounded font-mono text-[10px] bg-[var(--accent-color)] text-black cursor-pointer min-w-[120px] text-center"
+            : "px-2 py-1 rounded font-mono text-[10px] bg-white/10 hover:bg-white/20 cursor-pointer min-w-[120px] text-center"
+        }
+        title={capturing ? "Press the new combo… Esc to cancel" : "Click to remap"}
+      >
+        {capturing ? "press keys…" : draft}
+      </div>
+    </label>
+  );
+}
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const appearance = useSettingsStore((s) => s.appearance);
   const update = useSettingsStore((s) => s.update);
   const reset = useSettingsStore((s) => s.reset);
+  const hotkeys = useSettingsStore((s) => s.hotkeys);
+  const setHotkeys = useSettingsStore((s) => s.setHotkeys);
+  const resetHotkeys = useSettingsStore((s) => s.resetHotkeys);
   const [notifLead, setNotifLead] = useState<number>(2);
   const [testStatus, setTestStatus] = useState<"" | "sent" | "error">("");
+
+  const updateHotkey = (field: keyof HotkeyConfig, value: string) => {
+    void setHotkeys({ ...hotkeys, [field]: value });
+  };
 
   useEffect(() => {
     void api.getNotificationLead().then(setNotifLead).catch(() => {
@@ -142,6 +234,44 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             Could not send. Open the Tauri logs (RUST_LOG=info) to inspect.
           </p>
         )}
+      </div>
+
+      <div className="border-t border-white/10 pt-3 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">Hotkeys</h2>
+          <button
+            type="button"
+            onClick={() => void resetHotkeys()}
+            className="px-2 py-0.5 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+            title="Restore Ctrl+Shift+G/H/B/P"
+          >
+            Reset
+          </button>
+        </div>
+        <HotkeyCapture
+          label="Toggle main overlay"
+          value={hotkeys.toggle_visibility}
+          onChange={(v) => updateHotkey("toggle_visibility", v)}
+        />
+        <HotkeyCapture
+          label="Toggle click-through"
+          value={hotkeys.toggle_clickthrough}
+          onChange={(v) => updateHotkey("toggle_clickthrough", v)}
+        />
+        <HotkeyCapture
+          label="Toggle Bosses window"
+          value={hotkeys.toggle_bosses}
+          onChange={(v) => updateHotkey("toggle_bosses", v)}
+        />
+        <HotkeyCapture
+          label="Toggle Achievements window"
+          value={hotkeys.toggle_achievements}
+          onChange={(v) => updateHotkey("toggle_achievements", v)}
+        />
+        <p className="text-[10px] opacity-50 italic">
+          Click a combo, press the new keys. Need at least one modifier
+          (Ctrl/Alt/Shift). Esc cancels. Re-binds immediately.
+        </p>
       </div>
 
       <p className="opacity-50 text-[10px] mt-auto">

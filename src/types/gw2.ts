@@ -99,6 +99,13 @@ export type AppearanceSettings = {
   font_size: number;
 };
 
+export type HotkeyConfig = {
+  toggle_visibility: string;
+  toggle_clickthrough: string;
+  toggle_bosses: string;
+  toggle_achievements: string;
+};
+
 export type SyncReport = {
   progress_changes: number;
   wv_daily: number;

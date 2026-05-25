@@ -4,7 +4,7 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 import { useCollapse } from "../hooks/useCollapse";
 import { useCrossWindowSync } from "../hooks/useCrossWindowSync";
-import { useHotkeys, HOTKEY_LABELS } from "../hooks/useHotkeys";
+import { useHotkeys } from "../hooks/useHotkeys";
 import { api } from "../lib/tauri";
 import { useAppStore, type ViewKey } from "../store/app";
 import { useSettingsStore } from "../store/settings";
@@ -51,6 +51,7 @@ export function Overlay() {
   const clearApiKey = useAppStore((s) => s.clearApiKey);
   const setView = useAppStore((s) => s.setView);
   const loadSettings = useSettingsStore((s) => s.load);
+  const hotkeys = useSettingsStore((s) => s.hotkeys);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { collapsed, toggle: toggleCollapse } = useCollapse();
 
@@ -114,9 +115,9 @@ export function Overlay() {
             ) : (
               <span />
             )}
-            <span title="Hotkeys" className="opacity-70">
-              {HOTKEY_LABELS.toggleVisibility} hide · {HOTKEY_LABELS.toggleClickThrough} c-through ·{" "}
-              {HOTKEY_LABELS.toggleBosses} bosses · {HOTKEY_LABELS.toggleAchievements} pinned
+            <span title="Hotkeys (remap in Settings)" className="opacity-70">
+              {hotkeys.toggle_visibility} hide · {hotkeys.toggle_clickthrough} c-through ·{" "}
+              {hotkeys.toggle_bosses} bosses · {hotkeys.toggle_achievements} pinned
             </span>
           </footer>
         </>

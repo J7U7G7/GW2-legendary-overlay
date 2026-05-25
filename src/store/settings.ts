@@ -1,7 +1,8 @@
 import { create } from "zustand";
 
 import { api } from "../lib/tauri";
-import type { AppearanceSettings } from "../types/gw2";
+import { HOTKEY_DEFAULTS } from "../hooks/useHotkeys";
+import type { AppearanceSettings, HotkeyConfig } from "../types/gw2";
 
 const DEFAULTS: AppearanceSettings = {
   opacity: 0.85,
@@ -13,10 +14,13 @@ const DEFAULTS: AppearanceSettings = {
 
 type SettingsStore = {
   appearance: AppearanceSettings;
+  hotkeys: HotkeyConfig;
   loaded: boolean;
   load: () => Promise<void>;
   update: (patch: Partial<AppearanceSettings>) => Promise<void>;
   reset: () => Promise<void>;
+  setHotkeys: (hotkeys: HotkeyConfig) => Promise<void>;
+  resetHotkeys: () => Promise<void>;
 };
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -45,16 +49,17 @@ function applyToDom(a: AppearanceSettings) {
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   appearance: DEFAULTS,
+  hotkeys: HOTKEY_DEFAULTS,
   loaded: false,
 
   async load() {
     try {
-      const a = await api.getAppearance();
-      set({ appearance: a, loaded: true });
+      const [a, h] = await Promise.all([api.getAppearance(), api.getHotkeys()]);
+      set({ appearance: a, hotkeys: h, loaded: true });
       applyToDom(a);
     } catch (e) {
-      console.warn("getAppearance failed, using defaults:", e);
-      set({ appearance: DEFAULTS, loaded: true });
+      console.warn("settings load failed, using defaults:", e);
+      set({ appearance: DEFAULTS, hotkeys: HOTKEY_DEFAULTS, loaded: true });
       applyToDom(DEFAULTS);
     }
   },
@@ -72,5 +77,19 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   async reset() {
     await get().update(DEFAULTS);
+  },
+
+  async setHotkeys(hotkeys) {
+    set({ hotkeys });
+    try {
+      await api.setHotkeys(hotkeys);
+      // Backend will emit `hotkeys_changed`; the useHotkeys hook re-binds.
+    } catch (e) {
+      console.warn("setHotkeys failed:", e);
+    }
+  },
+
+  async resetHotkeys() {
+    await get().setHotkeys(HOTKEY_DEFAULTS);
   },
 }));

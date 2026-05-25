@@ -2,11 +2,17 @@ import { useEffect } from "react";
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { listen } from "@tauri-apps/api/event";
 
-const TOGGLE_VISIBILITY = "CmdOrCtrl+Shift+G";
-const TOGGLE_CLICKTHROUGH = "CmdOrCtrl+Shift+H";
-const TOGGLE_BOSSES = "CmdOrCtrl+Shift+B";
-const TOGGLE_ACHIEVEMENTS = "CmdOrCtrl+Shift+P";
+import { api } from "../lib/tauri";
+import type { HotkeyConfig } from "../types/gw2";
+
+export const HOTKEY_DEFAULTS: HotkeyConfig = {
+  toggle_visibility: "CmdOrCtrl+Shift+G",
+  toggle_clickthrough: "CmdOrCtrl+Shift+H",
+  toggle_bosses: "CmdOrCtrl+Shift+B",
+  toggle_achievements: "CmdOrCtrl+Shift+P",
+};
 
 // Module-level state: we want one canonical "is the overlay click-through?"
 // flag shared across the (potentially re-mounted) hook so a second mount
@@ -40,43 +46,59 @@ async function toggleWindowByLabel(label: string) {
   }
 }
 
+async function bind(config: HotkeyConfig) {
+  await unregisterAll();
+  const safeRegister = async (accel: string, handler: () => void) => {
+    const trimmed = accel.trim();
+    if (!trimmed) return;
+    try {
+      await register(trimmed, (e) => {
+        if (e.state === "Pressed") handler();
+      });
+    } catch (err) {
+      console.warn(`hotkey '${trimmed}' failed to register:`, err);
+    }
+  };
+  await safeRegister(config.toggle_visibility, () => void toggleVisibility());
+  await safeRegister(config.toggle_clickthrough, () => void toggleClickThrough());
+  await safeRegister(config.toggle_bosses, () => void toggleWindowByLabel("bosses"));
+  await safeRegister(config.toggle_achievements, () =>
+    void toggleWindowByLabel("achievements"),
+  );
+}
+
 export function useHotkeys() {
   useEffect(() => {
     let cancelled = false;
+    let unlistenHotkeysChanged: (() => void) | null = null;
+
     const setup = async () => {
       try {
-        // Clear any leftover bindings from a previous reload (Vite HMR).
-        await unregisterAll();
+        const cfg = await api.getHotkeys();
         if (cancelled) return;
-        await register(TOGGLE_VISIBILITY, (e) => {
-          if (e.state === "Pressed") void toggleVisibility();
-        });
-        await register(TOGGLE_CLICKTHROUGH, (e) => {
-          if (e.state === "Pressed") void toggleClickThrough();
-        });
-        await register(TOGGLE_BOSSES, (e) => {
-          if (e.state === "Pressed") void toggleWindowByLabel("bosses");
-        });
-        await register(TOGGLE_ACHIEVEMENTS, (e) => {
-          if (e.state === "Pressed") void toggleWindowByLabel("achievements");
-        });
+        await bind(cfg);
+        // Re-bind on hotkeys_changed broadcast from cmd_set_hotkeys.
+        unlistenHotkeysChanged = await listen<HotkeyConfig>(
+          "hotkeys_changed",
+          (e) => {
+            if (cancelled) return;
+            void bind(e.payload).catch((err) =>
+              console.warn("hotkey re-bind failed:", err),
+            );
+          },
+        );
       } catch (err) {
-        console.warn("hotkey registration failed:", err);
+        console.warn("hotkey setup failed:", err);
       }
     };
     void setup();
+
     return () => {
       cancelled = true;
+      if (unlistenHotkeysChanged) unlistenHotkeysChanged();
       void unregisterAll().catch(() => {
         // ignore
       });
     };
   }, []);
 }
-
-export const HOTKEY_LABELS = {
-  toggleVisibility: TOGGLE_VISIBILITY,
-  toggleClickThrough: TOGGLE_CLICKTHROUGH,
-  toggleBosses: TOGGLE_BOSSES,
-  toggleAchievements: TOGGLE_ACHIEVEMENTS,
-};

@@ -583,6 +583,84 @@ pub async fn cmd_set_notification_lead(state: State<'_, AppState>, minutes: i64)
 }
 
 // ============================================================================
+// Hotkey configuration (persistent, user-remappable)
+// ============================================================================
+
+/// Default shortcut for each action. `accelerator` format from
+/// `@tauri-apps/plugin-global-shortcut` — `CmdOrCtrl` resolves to Ctrl on
+/// Windows / Cmd on macOS.
+pub const DEFAULT_HOTKEY_TOGGLE_VISIBILITY: &str = "CmdOrCtrl+Shift+G";
+pub const DEFAULT_HOTKEY_TOGGLE_CLICKTHROUGH: &str = "CmdOrCtrl+Shift+H";
+pub const DEFAULT_HOTKEY_TOGGLE_BOSSES: &str = "CmdOrCtrl+Shift+B";
+pub const DEFAULT_HOTKEY_TOGGLE_ACHIEVEMENTS: &str = "CmdOrCtrl+Shift+P";
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct HotkeyConfig {
+    pub toggle_visibility: String,
+    pub toggle_clickthrough: String,
+    pub toggle_bosses: String,
+    pub toggle_achievements: String,
+}
+
+impl Default for HotkeyConfig {
+    fn default() -> Self {
+        Self {
+            toggle_visibility: DEFAULT_HOTKEY_TOGGLE_VISIBILITY.into(),
+            toggle_clickthrough: DEFAULT_HOTKEY_TOGGLE_CLICKTHROUGH.into(),
+            toggle_bosses: DEFAULT_HOTKEY_TOGGLE_BOSSES.into(),
+            toggle_achievements: DEFAULT_HOTKEY_TOGGLE_ACHIEVEMENTS.into(),
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn cmd_get_hotkeys(state: State<'_, AppState>) -> Result<HotkeyConfig> {
+    let pick = |key: &str, fallback: &str| -> Result<String> {
+        Ok(state
+            .db
+            .get_setting(key)?
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or_else(|| fallback.to_string()))
+    };
+    Ok(HotkeyConfig {
+        toggle_visibility: pick("hotkey_toggle_visibility", DEFAULT_HOTKEY_TOGGLE_VISIBILITY)?,
+        toggle_clickthrough: pick(
+            "hotkey_toggle_clickthrough",
+            DEFAULT_HOTKEY_TOGGLE_CLICKTHROUGH,
+        )?,
+        toggle_bosses: pick("hotkey_toggle_bosses", DEFAULT_HOTKEY_TOGGLE_BOSSES)?,
+        toggle_achievements: pick(
+            "hotkey_toggle_achievements",
+            DEFAULT_HOTKEY_TOGGLE_ACHIEVEMENTS,
+        )?,
+    })
+}
+
+#[tauri::command]
+pub async fn cmd_set_hotkeys(
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+    hotkeys: HotkeyConfig,
+) -> Result<()> {
+    state
+        .db
+        .set_setting("hotkey_toggle_visibility", &hotkeys.toggle_visibility)?;
+    state
+        .db
+        .set_setting("hotkey_toggle_clickthrough", &hotkeys.toggle_clickthrough)?;
+    state
+        .db
+        .set_setting("hotkey_toggle_bosses", &hotkeys.toggle_bosses)?;
+    state
+        .db
+        .set_setting("hotkey_toggle_achievements", &hotkeys.toggle_achievements)?;
+    // Broadcast so the main window can unregister + re-register the new
+    // accelerators without a relaunch.
+    let _ = app.emit("hotkeys_changed", &hotkeys);
+    Ok(())
+}
+
+// ============================================================================
 // Appearance settings (spec §5.6)
 // ============================================================================
 
