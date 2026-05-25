@@ -154,17 +154,17 @@ function Header(props: {
 
   return (
     <header
-      className="flex items-center justify-between border-b border-white/10 shrink-0"
+      className="flex items-center justify-between border-b border-white/10 shrink-0 min-w-0"
       onMouseDown={onMouseDown}
     >
       <div
         data-drag="1"
         data-tauri-drag-region
-        className="flex-1 px-3 py-1.5 text-xs font-semibold cursor-grab active:cursor-grabbing"
+        className="flex-1 min-w-0 px-3 py-1.5 text-xs font-semibold cursor-grab active:cursor-grabbing truncate"
       >
         GW2 Overlay
       </div>
-      <div className="flex items-center gap-1 px-2">
+      <div className="flex items-center gap-1 px-2 shrink-0">
         {props.canSync && (
           <button
             type="button"
@@ -245,7 +245,7 @@ function Tabs({
   pinnedCount: number;
 }) {
   return (
-    <nav className="flex border-b border-white/10 text-xs shrink-0">
+    <nav className="flex border-b border-white/10 text-xs shrink-0 overflow-x-auto whitespace-nowrap">
       {TABS.map((t) => {
         const isActive = current === t.id;
         return (
@@ -253,7 +253,7 @@ function Tabs({
             key={t.id}
             type="button"
             onClick={() => onSelect(t.id)}
-            className={`px-3 py-1.5 border-b-2 transition-colors ${
+            className={`shrink-0 px-3 py-1.5 border-b-2 transition-colors ${
               isActive
                 ? "border-[var(--accent-color)] text-[var(--text-color)]"
                 : "border-transparent opacity-60 hover:opacity-100"
