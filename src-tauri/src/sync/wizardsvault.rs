@@ -41,10 +41,28 @@ pub async fn sync_weekly(client: &ApiClient, db: &Db) -> Result<usize> {
 }
 
 /// "Special" objectives currently follow the weekly cadence per ArenaNet's
-/// implementation; revisit if that ever changes.
+/// implementation; revisit if that ever changes. When no special event is
+/// active the endpoint returns a non-WizardsVaultPeriod shape (likely an
+/// empty array or null) that fails to decode. We treat that as "no special
+/// period" rather than propagating the error — it's expected most of the
+/// year and showed up as a recurring ERROR line in every user's log.
 pub async fn sync_special(client: &ApiClient, db: &Db) -> Result<usize> {
     let period_start = weekly_period_start(Utc::now());
-    sync_period(client, db, PERIOD_SPECIAL, period_start, "/v2/account/wizardsvault/special").await
+    match sync_period(
+        client,
+        db,
+        PERIOD_SPECIAL,
+        period_start,
+        "/v2/account/wizardsvault/special",
+    )
+    .await
+    {
+        Ok(n) => Ok(n),
+        Err(e) => {
+            debug!(error = %e, "no active special WV period — treating as 0 objectives");
+            Ok(0)
+        }
+    }
 }
 
 async fn sync_period(

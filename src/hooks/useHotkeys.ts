@@ -47,23 +47,52 @@ async function toggleWindowByLabel(label: string) {
 }
 
 async function bind(config: HotkeyConfig) {
-  await unregisterAll();
-  const safeRegister = async (accel: string, handler: () => void) => {
-    const trimmed = accel.trim();
-    if (!trimmed) return;
-    try {
-      await register(trimmed, (e) => {
-        if (e.state === "Pressed") handler();
-      });
-    } catch (err) {
-      console.warn(`hotkey '${trimmed}' failed to register:`, err);
+  try {
+    await unregisterAll();
+  } catch (err) {
+    console.warn("unregisterAll failed (continuing):", err);
+  }
+  // Try each shortcut, fall back to the hard-coded default if the user's
+  // configured value rejects (bad combo, conflict, etc.). Without this
+  // fallback a single mis-captured accelerator from the Settings panel kills
+  // every other hotkey in the bind.
+  const tryBind = async (configured: string, fallback: string, handler: () => void) => {
+    const candidates = Array.from(
+      new Set([configured.trim(), fallback].filter((s) => s.length > 0)),
+    );
+    for (const accel of candidates) {
+      try {
+        await register(accel, (e) => {
+          if (e.state === "Pressed") handler();
+        });
+        return; // registered, stop trying alternates
+      } catch (err) {
+        console.warn(`hotkey '${accel}' failed to register:`, err);
+      }
     }
+    console.warn(
+      `all candidates for this action failed (configured='${configured}', fallback='${fallback}')`,
+    );
   };
-  await safeRegister(config.toggle_visibility, () => void toggleVisibility());
-  await safeRegister(config.toggle_clickthrough, () => void toggleClickThrough());
-  await safeRegister(config.toggle_bosses, () => void toggleWindowByLabel("bosses"));
-  await safeRegister(config.toggle_achievements, () =>
-    void toggleWindowByLabel("achievements"),
+  await tryBind(
+    config.toggle_visibility,
+    HOTKEY_DEFAULTS.toggle_visibility,
+    () => void toggleVisibility(),
+  );
+  await tryBind(
+    config.toggle_clickthrough,
+    HOTKEY_DEFAULTS.toggle_clickthrough,
+    () => void toggleClickThrough(),
+  );
+  await tryBind(
+    config.toggle_bosses,
+    HOTKEY_DEFAULTS.toggle_bosses,
+    () => void toggleWindowByLabel("bosses"),
+  );
+  await tryBind(
+    config.toggle_achievements,
+    HOTKEY_DEFAULTS.toggle_achievements,
+    () => void toggleWindowByLabel("achievements"),
   );
 }
 
@@ -73,10 +102,23 @@ export function useHotkeys() {
     let unlistenHotkeysChanged: (() => void) | null = null;
 
     const setup = async () => {
+      // Never let an error in getHotkeys leave the user without any global
+      // shortcuts — fall back to the hard-coded defaults if the backend
+      // command throws or returns junk. The bind() function additionally
+      // falls back per-shortcut if a specific configured combo rejects.
+      let cfg: HotkeyConfig = HOTKEY_DEFAULTS;
       try {
-        const cfg = await api.getHotkeys();
-        if (cancelled) return;
+        cfg = await api.getHotkeys();
+      } catch (err) {
+        console.warn("getHotkeys failed, using built-in defaults:", err);
+      }
+      if (cancelled) return;
+      try {
         await bind(cfg);
+      } catch (err) {
+        console.warn("hotkey bind failed entirely:", err);
+      }
+      try {
         // Re-bind on hotkeys_changed broadcast from cmd_set_hotkeys.
         unlistenHotkeysChanged = await listen<HotkeyConfig>(
           "hotkeys_changed",
@@ -88,7 +130,7 @@ export function useHotkeys() {
           },
         );
       } catch (err) {
-        console.warn("hotkey setup failed:", err);
+        console.warn("hotkeys_changed listener failed:", err);
       }
     };
     void setup();

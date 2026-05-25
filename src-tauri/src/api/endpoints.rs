@@ -101,10 +101,13 @@ pub struct WizardsVaultObjective {
 
 #[derive(Debug, Deserialize)]
 pub struct WizardsVaultPeriod {
+    #[serde(default)]
     pub meta_progress_current: u32,
+    #[serde(default)]
     pub meta_progress_complete: u32,
     #[serde(default)]
     pub meta_reward_claimed: bool,
+    #[serde(default)]
     pub objectives: Vec<WizardsVaultObjective>,
 }
 
