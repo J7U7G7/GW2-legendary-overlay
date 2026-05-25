@@ -1295,6 +1295,10 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<PinnedVie
     let weights = Weights::default();
 
     let pinned_boss_ids = state.db.list_pinned_boss_ids()?;
+    tracing::debug!(
+        explicit_pinned_bosses = pinned_boss_ids.len(),
+        "get_pinned_view: starting"
+    );
     let achievements = load_pinned_achievement_views(&state.db, &upcoming_window, &weights, now)?;
 
     // Group achievements by associated_boss
@@ -1361,6 +1365,11 @@ pub async fn cmd_get_pinned_view(state: State<'_, AppState>) -> Result<PinnedVie
     boss_groups.sort_by_key(|g| g.next_spawn);
     standalone.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
 
+    tracing::debug!(
+        boss_groups = boss_groups.len(),
+        standalone = standalone.len(),
+        "get_pinned_view: returning"
+    );
     Ok(PinnedView { boss_groups, standalone })
 }
 

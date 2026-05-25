@@ -45,12 +45,48 @@ pub fn store_api_key(db: &Db, key: &ApiKey) -> Result<()> {
 
 pub fn load_api_key(db: &Db) -> Result<Option<ApiKey>> {
     let Some(b64) = db.get_setting(KEY_SETTING)? else {
+        tracing::info!(
+            "load_api_key: no row in settings — user will be prompted to enter a key"
+        );
         return Ok(None);
     };
-    let blob = B64.decode(b64.as_bytes()).map_err(|e| AppError::WinCrypto(format!("base64: {e}")))?;
-    let plain = dpapi::unprotect(&blob)?;
-    let text = String::from_utf8(plain).map_err(|_| AppError::BadKeyFormat)?;
-    Ok(Some(ApiKey::parse(&text)?))
+    tracing::debug!(
+        b64_len = b64.len(),
+        "load_api_key: found stored row, attempting DPAPI unprotect"
+    );
+    let blob = match B64.decode(b64.as_bytes()) {
+        Ok(b) => b,
+        Err(e) => {
+            tracing::error!(error = %e, "load_api_key: base64 decode failed");
+            return Err(AppError::WinCrypto(format!("base64: {e}")));
+        }
+    };
+    let plain = match dpapi::unprotect(&blob) {
+        Ok(p) => p,
+        Err(e) => {
+            tracing::error!(error = %e, "load_api_key: DPAPI unprotect failed");
+            return Err(e);
+        }
+    };
+    let text = match String::from_utf8(plain) {
+        Ok(t) => t,
+        Err(_) => {
+            tracing::error!("load_api_key: UTF-8 decode of decrypted blob failed");
+            return Err(AppError::BadKeyFormat);
+        }
+    };
+    let key = match ApiKey::parse(&text) {
+        Ok(k) => k,
+        Err(e) => {
+            tracing::error!(error = %e, "load_api_key: stored key fails format validation");
+            return Err(e);
+        }
+    };
+    tracing::info!(
+        account = key.account_id(),
+        "load_api_key: loaded + decrypted successfully"
+    );
+    Ok(Some(key))
 }
 
 pub fn clear_api_key(db: &Db) -> Result<()> {
