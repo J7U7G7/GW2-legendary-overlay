@@ -83,6 +83,14 @@ export type AccountItemResult = {
   locations: AccountItemLocation[];
 };
 
+export type AccountCurrencyResult = {
+  currency_id: number;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  value: number;
+};
+
 export type AppearanceSettings = {
   opacity: number;
   accent_color: string;

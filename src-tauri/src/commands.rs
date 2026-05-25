@@ -372,6 +372,62 @@ pub async fn cmd_sync_account_items(state: State<'_, AppState>) -> Result<usize>
     Ok(n)
 }
 
+#[derive(Serialize)]
+pub struct AccountCurrencyResult {
+    pub currency_id: u32,
+    pub name: String,
+    pub description: Option<String>,
+    pub icon: Option<String>,
+    pub value: i64,
+}
+
+#[tauri::command]
+pub async fn cmd_sync_wallet(state: State<'_, AppState>) -> Result<usize> {
+    let key = load_api_key(&state.db)?.ok_or(AppError::NoApiKey)?;
+    let client = ApiClient::new(Some(key))?;
+    crate::sync::wallet::sync_wallet(&client, &state.db).await
+}
+
+#[tauri::command]
+pub async fn cmd_search_currencies(
+    state: State<'_, AppState>,
+    query: String,
+    limit: Option<u32>,
+) -> Result<Vec<AccountCurrencyResult>> {
+    let q = query.trim();
+    if q.is_empty() {
+        return Ok(vec![]);
+    }
+    let like = format!("%{q}%");
+    let limit = limit.unwrap_or(30).min(100) as i64;
+    state.db.with_conn(|c| {
+        // LEFT JOIN so a currency we have a definition for but no wallet entry
+        // (extremely rare — would mean the currency was wiped from the wallet
+        // mid-session) still shows up with value 0.
+        let mut stmt = c.prepare(
+            "SELECT c.id, c.name, c.description, c.icon, COALESCE(ac.value, 0)
+             FROM currencies c
+             LEFT JOIN account_currencies ac ON ac.currency_id = c.id
+             WHERE c.name LIKE ?1 COLLATE NOCASE
+             ORDER BY length(c.name), c.sort_order, c.name
+             LIMIT ?2",
+        )?;
+        let rows: Vec<AccountCurrencyResult> = stmt
+            .query_map(rusqlite::params![like, limit], |r| {
+                Ok(AccountCurrencyResult {
+                    currency_id: r.get::<_, i64>(0)? as u32,
+                    name: r.get(1)?,
+                    description: r.get(2)?,
+                    icon: r.get(3)?,
+                    value: r.get(4)?,
+                })
+            })?
+            .filter_map(|r| r.ok())
+            .collect();
+        Ok(rows)
+    })
+}
+
 #[tauri::command]
 pub async fn cmd_search_account_items(
     state: State<'_, AppState>,

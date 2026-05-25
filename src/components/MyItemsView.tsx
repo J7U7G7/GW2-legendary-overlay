@@ -2,7 +2,11 @@ import { useEffect, useState } from "react";
 
 import { api } from "../lib/tauri";
 import { stripGw2Markup } from "../lib/format";
-import type { AccountItemResult, AccountItemLocation } from "../types/gw2";
+import type {
+  AccountCurrencyResult,
+  AccountItemLocation,
+  AccountItemResult,
+} from "../types/gw2";
 
 const RARITY_COLORS: Record<string, string> = {
   Junk: "text-gray-500",
@@ -16,7 +20,6 @@ const RARITY_COLORS: Record<string, string> = {
 };
 
 function locationLabel(loc: AccountItemLocation): string {
-  // Pretty-print 'bank' / 'materials' / 'shared_inventory' / 'character:<name>'.
   if (loc.location.startsWith("character:")) {
     return `${loc.location.slice("character:".length)}${loc.location_detail ? ` · ${loc.location_detail}` : ""}`;
   }
@@ -27,7 +30,22 @@ function locationLabel(loc: AccountItemLocation): string {
   return loc.location_detail ? `${base} · ${loc.location_detail}` : base;
 }
 
-function ResultRow({ item }: { item: AccountItemResult }) {
+/** Gold display: a coin value (currency_id == 1) is stored in copper. Format
+ * as "X g Y s Z c" only when the value exceeds 100 copper; otherwise plain
+ * integer (most other currencies are integer counts). */
+function formatCurrencyValue(currencyId: number, value: number): string {
+  if (currencyId === 1) {
+    const sign = value < 0 ? "-" : "";
+    const abs = Math.abs(value);
+    const g = Math.floor(abs / 10000);
+    const s = Math.floor((abs % 10000) / 100);
+    const c = abs % 100;
+    return `${sign}${g}g ${s}s ${c}c`;
+  }
+  return value.toLocaleString();
+}
+
+function ItemRow({ item }: { item: AccountItemResult }) {
   const [expanded, setExpanded] = useState(false);
   const colorClass = item.rarity ? RARITY_COLORS[item.rarity] ?? "" : "";
   return (
@@ -62,29 +80,48 @@ function ResultRow({ item }: { item: AccountItemResult }) {
   );
 }
 
+function CurrencyRow({ currency }: { currency: AccountCurrencyResult }) {
+  return (
+    <li className="px-3 py-1.5 flex items-center justify-between border-b border-white/5 bg-amber-400/[0.04]">
+      <span className="text-xs flex items-center gap-2" title={currency.description ?? undefined}>
+        <span className="opacity-50">💰</span>
+        {stripGw2Markup(currency.name)}
+      </span>
+      <span className="font-mono text-[10px] text-amber-200">
+        {formatCurrencyValue(currency.currency_id, currency.value)}
+      </span>
+    </li>
+  );
+}
+
 export function MyItemsView() {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<AccountItemResult[]>([]);
+  const [items, setItems] = useState<AccountItemResult[]>([]);
+  const [currencies, setCurrencies] = useState<AccountCurrencyResult[]>([]);
   const [status, setStatus] = useState<"" | "searching" | "syncing" | "error">("");
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Debounced search
   useEffect(() => {
     const t = window.setTimeout(async () => {
       const q = query.trim();
       if (q.length === 0) {
-        setResults([]);
+        setItems([]);
+        setCurrencies([]);
         return;
       }
       setStatus("searching");
       setErrorMsg(null);
       try {
-        const r = await api.searchAccountItems(q, 30);
-        setResults(r);
+        const [it, cu] = await Promise.all([
+          api.searchAccountItems(q, 30),
+          api.searchCurrencies(q, 15),
+        ]);
+        setItems(it);
+        setCurrencies(cu);
         setStatus("");
       } catch (e) {
-        console.warn("searchAccountItems failed:", e);
+        console.warn("search failed:", e);
         setStatus("error");
         setErrorMsg(String(e));
       }
@@ -96,20 +133,30 @@ export function MyItemsView() {
     setStatus("syncing");
     setErrorMsg(null);
     try {
-      const n = await api.syncAccountItems();
+      const [n] = await Promise.all([
+        api.syncAccountItems(),
+        api.syncWallet(),
+      ]);
       setLastSync(`${n} entries · ${new Date().toLocaleTimeString()}`);
       setStatus("");
-      // Re-run search to reflect new data.
-      if (query.trim()) {
-        const r = await api.searchAccountItems(query.trim(), 30);
-        setResults(r);
+      const q = query.trim();
+      if (q) {
+        const [it, cu] = await Promise.all([
+          api.searchAccountItems(q, 30),
+          api.searchCurrencies(q, 15),
+        ]);
+        setItems(it);
+        setCurrencies(cu);
       }
     } catch (e) {
-      console.warn("syncAccountItems failed:", e);
+      console.warn("sync failed:", e);
       setStatus("error");
       setErrorMsg(String(e));
     }
   };
+
+  const hasQuery = query.trim().length > 0;
+  const hasResults = items.length > 0 || currencies.length > 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -119,7 +166,7 @@ export function MyItemsView() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search items in your account…"
+            placeholder="Search items + currencies…"
             autoFocus
             className="flex-1 font-mono text-xs px-2 py-1.5 bg-white/5 border border-white/10 rounded focus:outline-none focus:border-[var(--accent-color)]"
           />
@@ -128,7 +175,7 @@ export function MyItemsView() {
             onClick={() => void onSync()}
             disabled={status === "syncing"}
             className="px-2 py-1 text-[10px] bg-white/10 hover:bg-white/20 rounded disabled:opacity-40"
-            title="Re-scan bank, materials, shared inventory, and every character"
+            title="Re-scan bank, materials, shared inventory, characters, and wallet"
           >
             {status === "syncing" ? "Syncing…" : "↻ Sync"}
           </button>
@@ -137,17 +184,21 @@ export function MyItemsView() {
         {errorMsg && <p className="text-[10px] text-red-300">{errorMsg}</p>}
       </div>
       <ul className="flex-1 overflow-y-auto">
-        {results.length === 0 && query.trim().length === 0 && (
+        {!hasQuery && (
           <li className="px-3 py-2 text-xs opacity-50">
             Type at least one letter to search across bank, materials, shared
-            inventory, and characters. Run a sync first if you've never indexed.
+            inventory, characters, and the wallet. Run a sync first if you've
+            never indexed.
           </li>
         )}
-        {results.length === 0 && query.trim().length > 0 && status !== "searching" && (
+        {hasQuery && !hasResults && status !== "searching" && (
           <li className="px-3 py-2 text-xs opacity-50 italic">No matches.</li>
         )}
-        {results.map((item) => (
-          <ResultRow key={item.item_id} item={item} />
+        {currencies.map((c) => (
+          <CurrencyRow key={c.currency_id} currency={c} />
+        ))}
+        {items.map((item) => (
+          <ItemRow key={item.item_id} item={item} />
         ))}
       </ul>
     </div>

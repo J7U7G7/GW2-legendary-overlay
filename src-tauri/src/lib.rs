@@ -78,6 +78,8 @@ pub fn run() {
             commands::cmd_set_notification_lead,
             commands::cmd_sync_account_items,
             commands::cmd_search_account_items,
+            commands::cmd_sync_wallet,
+            commands::cmd_search_currencies,
             commands::cmd_list_todos,
             commands::cmd_add_todo,
             commands::cmd_toggle_todo,

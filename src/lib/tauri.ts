@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  AccountCurrencyResult,
   AccountItemResult,
   AchievementSearchResult,
   ApiKeyStatus,
@@ -50,6 +51,9 @@ export const api = {
   syncAccountItems: () => invoke<number>("cmd_sync_account_items"),
   searchAccountItems: (query: string, limit = 30) =>
     invoke<AccountItemResult[]>("cmd_search_account_items", { query, limit }),
+  syncWallet: () => invoke<number>("cmd_sync_wallet"),
+  searchCurrencies: (query: string, limit = 30) =>
+    invoke<AccountCurrencyResult[]>("cmd_search_currencies", { query, limit }),
   listTodos: (period: "daily" | "weekly") =>
     invoke<TodoView[]>("cmd_list_todos", { period }),
   addTodo: (text: string, period: "daily" | "weekly") =>

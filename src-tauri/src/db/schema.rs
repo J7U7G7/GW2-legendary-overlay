@@ -16,6 +16,8 @@ const MIGRATIONS: &[&str] = &[
     ACCOUNT_ITEMS_SCHEMA,
     // v6: custom daily/weekly todos
     TODOS_SCHEMA,
+    // v7: wallet currencies (account values + cached definitions)
+    WALLET_SCHEMA,
 ];
 
 const INITIAL_SCHEMA: &str = r#"
@@ -158,6 +160,23 @@ const TODOS_SCHEMA: &str = r#"
     CREATE INDEX idx_todos_period ON todos(period);
 "#;
 
+const WALLET_SCHEMA: &str = r#"
+    CREATE TABLE currencies (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        icon TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        last_synced TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE account_currencies (
+        currency_id INTEGER PRIMARY KEY,
+        value INTEGER NOT NULL DEFAULT 0,
+        last_synced TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+"#;
+
 pub fn migrate(conn: &Connection) -> Result<()> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS _migrations (
@@ -204,10 +223,12 @@ mod tests {
         let t = tables(&conn);
         for expected in [
             "_migrations",
+            "account_currencies",
             "account_items",
             "account_progress",
             "achievement_metadata",
             "achievements",
+            "currencies",
             "daily_assignments",
             "items_cache",
             "legendary_collection_members",

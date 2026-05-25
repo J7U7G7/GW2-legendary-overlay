@@ -236,6 +236,38 @@ pub async fn get_characters_all(c: &ApiClient) -> Result<Vec<Character>> {
     c.get_json("/v2/characters?ids=all").await
 }
 
+#[derive(Debug, Deserialize)]
+pub struct WalletEntry {
+    pub id: u32,
+    pub value: i64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CurrencyDetail {
+    pub id: u32,
+    pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub order: i32,
+}
+
+#[allow(dead_code)]
+pub async fn get_account_wallet(c: &ApiClient) -> Result<Vec<WalletEntry>> {
+    c.get_json("/v2/account/wallet").await
+}
+
+#[allow(dead_code)]
+pub async fn get_currencies_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<CurrencyDetail>> {
+    if ids.is_empty() {
+        return Ok(vec![]);
+    }
+    let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+    c.get_json(&format!("/v2/currencies?ids={ids_csv}&lang=fr")).await
+}
+
 #[allow(dead_code)]
 pub async fn get_wizardsvault_daily(c: &ApiClient) -> Result<WizardsVaultPeriod> {
     c.get_json("/v2/account/wizardsvault/daily").await
