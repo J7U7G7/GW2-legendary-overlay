@@ -29,11 +29,31 @@ jobs:
       - name: Install npm deps
         run: npm ci
 
+      # Sanity check that the signing secret actually reached the runner.
+      # We print only the byte length, never the key contents — a length of
+      # 0 means the secret is missing or misnamed and signing will silently
+      # fall through to unsigned bundles (which the updater rejects).
+      - name: Verify signing key secret is present
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          $len = $env:TAURI_SIGNING_PRIVATE_KEY.Length
+          Write-Host "TAURI_SIGNING_PRIVATE_KEY length: $len"
+          if ($len -eq 0) {
+            Write-Error "TAURI_SIGNING_PRIVATE_KEY secret is empty or missing. Add it under Settings → Secrets → Actions."
+            exit 1
+          }
+
       # The Tauri build picks up TAURI_SIGNING_PRIVATE_KEY and signs every
       # bundle. The password env is hardcoded to empty here because the
       # key was generated with `--password ""` (no encryption). A non-empty
       # value would make minisign reject the key and silently skip the NSIS
       # bundle, breaking the manifest gen step downstream.
+      #
+      # `bundle.createUpdaterArtifacts: true` in tauri.conf.json is what
+      # actually triggers .sig generation alongside each installer. Without
+      # it Tauri 2 ships unsigned bundles even with the pubkey configured.
       - name: Tauri build (signs MSI + NSIS bundles)
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
