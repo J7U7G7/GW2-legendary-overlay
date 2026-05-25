@@ -1,4 +1,35 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke as rawInvoke } from "@tauri-apps/api/core";
+
+/**
+ * Wrap Tauri's invoke with a small retry loop scoped to the boot race where
+ * the FE webview's first useEffect can fire BEFORE the Rust setup hook has
+ * called `app.manage(AppState)`. In that window the IPC layer throws
+ *   "state not managed for field `state` on command `cmd_...`"
+ * and the FE's catch path otherwise persists the failure (apiKeyChecked
+ * true + apiKeyStatus null → ApiKeySetup screen). Retrying with backoff
+ * lets state.manage complete in the next ~500 ms and the call succeeds.
+ *
+ * Other error types propagate immediately — we don't want to mask real
+ * 401s, network blips, etc.
+ */
+async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  const MAX_ATTEMPTS = 6;
+  const BASE_DELAY_MS = 80;
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      return await rawInvoke<T>(cmd, args);
+    } catch (err) {
+      lastErr = err;
+      const msg = String(err);
+      const isBootRace
+        = msg.includes("state not managed") || msg.includes("AppState");
+      if (!isBootRace) throw err;
+      await new Promise((r) => setTimeout(r, BASE_DELAY_MS * (attempt + 1)));
+    }
+  }
+  throw lastErr;
+}
 
 import type {
   AccountCurrencyResult,
