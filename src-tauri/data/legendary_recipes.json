@@ -1,10 +1,10 @@
 {
   "_meta": {
     "description": "Curated legendary recipe components + per-legendary references. Recipes are intentionally one-level-deep (the curator decides which sub-gifts to expand into leaves vs. leave as 'specific work'). Item IDs sourced from https://wiki.guildwars2.com/ and verified against https://api.guildwars2.com/v2/items?ids=... — items with uncertain IDs are marked in `notes`. Add new legendaries by referencing existing components + adding the precursor + signature high-value ingredients as direct leaves.",
-    "format_version": "1.1",
+    "format_version": "1.2",
     "last_updated": "2026-05-25",
     "verification_method": "GET /v2/items?ids=<csv>&lang=en — compare returned name to the leaf name field",
-    "scope_note": "All 32 legendary collections covered: 3 trinkets (Aurora, Vision, Coalescence), 1 backpack (Ad Infinitum), 3 armor sets (Envoy, Astral, Obsidian), 24 weapons (19 Gen 1, 4 Gen 2/HoT, 1 Janthir Wilds). Shared components are reused across legendaries; single-use signature work is inlined per legendary."
+    "scope_note": "All 32 legendary collections covered. Shared components: gift_of_fortune, gift_of_mastery, mystic_tribute, gen1_signature, vision_crystal. As of 1.2 the vision_crystal component flattens to its raw upstream mats (Bloodstone Dust ×100, Dragonite Ore ×100, Empyreal Fragment ×100, Augur's Stone) since players typically hold the raw form rather than tier-6 intermediates."
   },
   "components": {
     "gift_of_fortune": {
@@ -52,9 +52,12 @@
     },
     "vision_crystal": {
       "name": "Vision Crystal",
-      "description": "Required by every Gen 2/HoT legendary weapon and by Aurora/Vision/Coalescence trinkets. Mystic Forge: Augur's Stone + 100 Mystic Coin + 50 Pile of Crystalline Dust + Mystic Forge ingredients. Listed here as a 1-quantity leaf since players track the finished item; expand if you want to model upstream mats.",
+      "description": "Per-crystal upstream mats via the Mystic Forge variant: 1 Bloodstone Brick + 1 Dragonite Ingot + 1 Empyreal Star + 1 Augur's Stone. Each tier-6 intermediate is itself refined from 100 raw mats — players typically hold the raw mats rather than the bricks/ingots/stars, so this component flattens to the raw form so 'owned' counts the user's bank stacks directly. Legendaries that need N Vision Crystals (most Gen 2 weapons use 4) should multiply these quantities accordingly via additional direct leaves; the per-legendary entries currently treat this as 1× which is the floor.",
       "leaves": [
-        { "kind": "item", "id": 46746, "quantity": 1, "name": "Vision Crystal", "notes": "verify in-game; may show as 0 owned if consumed inline" }
+        { "kind": "item", "id": 46731, "quantity": 100, "name": "Pile of Bloodstone Dust" },
+        { "kind": "item", "id": 46733, "quantity": 100, "name": "Dragonite Ore" },
+        { "kind": "item", "id": 46735, "quantity": 100, "name": "Empyreal Fragment" },
+        { "kind": "item", "id": 46752, "quantity": 1, "name": "Augur's Stone" }
       ]
     }
   },
