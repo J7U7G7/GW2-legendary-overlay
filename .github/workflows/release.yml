@@ -29,15 +29,29 @@ jobs:
       - name: Install npm deps
         run: npm ci
 
-      # The Tauri build picks up these env vars and signs the bundle.
-      # Both are repository secrets; if either is missing, `tauri build`
-      # still succeeds but emits unsigned .sig files (zero bytes) and the
-      # auto-updater will refuse to apply.
+      # The Tauri build picks up TAURI_SIGNING_PRIVATE_KEY and signs every
+      # bundle. The password env is hardcoded to empty here because the
+      # key was generated with `--password ""` (no encryption). A non-empty
+      # value would make minisign reject the key and silently skip the NSIS
+      # bundle, breaking the manifest gen step downstream.
       - name: Tauri build (signs MSI + NSIS bundles)
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         run: npm run tauri build
+
+      # Diagnostic listing so future failures surface what was actually
+      # produced before the manifest step tries to find specific files.
+      - name: List bundle output
+        if: always()
+        shell: pwsh
+        run: |
+          $bundleRoot = "src-tauri/target/release/bundle"
+          if (Test-Path $bundleRoot) {
+            Get-ChildItem -Recurse $bundleRoot | Select-Object FullName, Length
+          } else {
+            Write-Host "No bundle directory at $bundleRoot"
+          }
 
       # Pluck the just-built NSIS .exe + its .sig and assemble the
       # manifest the auto-updater fetches. Tauri's updater honours either
