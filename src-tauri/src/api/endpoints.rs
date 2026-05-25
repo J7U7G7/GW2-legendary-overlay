@@ -184,6 +184,18 @@ pub async fn get_items_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<ItemDetai
     c.get_json(&format!("/v2/items?ids={ids_csv}&lang=fr")).await
 }
 
+/// Same batch as `get_items_batch` but with `lang=en`. Used purely to
+/// populate `name_en` so wiki links can deep-link to the canonical English
+/// page (the FR name doesn't resolve on wiki.guildwars2.com).
+#[allow(dead_code)]
+pub async fn get_items_batch_en(c: &ApiClient, ids: &[u32]) -> Result<Vec<ItemDetail>> {
+    if ids.is_empty() {
+        return Ok(vec![]);
+    }
+    let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+    c.get_json(&format!("/v2/items?ids={ids_csv}&lang=en")).await
+}
+
 #[derive(Debug, Deserialize)]
 pub struct SkinDetail {
     pub id: u32,
@@ -206,6 +218,15 @@ pub async fn get_skins_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<SkinDetai
     let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
     // FR for consistency with /v2/items.
     c.get_json(&format!("/v2/skins?ids={ids_csv}&lang=fr")).await
+}
+
+#[allow(dead_code)]
+pub async fn get_skins_batch_en(c: &ApiClient, ids: &[u32]) -> Result<Vec<SkinDetail>> {
+    if ids.is_empty() {
+        return Ok(vec![]);
+    }
+    let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+    c.get_json(&format!("/v2/skins?ids={ids_csv}&lang=en")).await
 }
 
 #[derive(Debug, Deserialize)]

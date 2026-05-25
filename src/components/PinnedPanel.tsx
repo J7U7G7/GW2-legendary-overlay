@@ -4,8 +4,24 @@ import { useAppStore } from "../store/app";
 import { eventTimeLabel, fillRequirement, stripGw2Markup } from "../lib/format";
 import type { PinnedBit, PinnedBossGroup, PinnedItem } from "../types/gw2";
 
+/** Direct wiki page URL — works when we have the canonical English name. */
+function directWikiUrl(enName: string) {
+  return `https://wiki.guildwars2.com/wiki/${encodeURIComponent(enName.replace(/ /g, "_"))}`;
+}
+
+/** Fallback when we don't have an EN name — search on the English wiki. */
 function searchWikiUrl(query: string) {
-  return `https://wiki.guildwars2.com/wiki/Special:Search?search=${encodeURIComponent(query)}`;
+  return `https://wiki.guildwars2.com/wiki/Special:Search?search=${encodeURIComponent(query)}&go=Go`;
+}
+
+/** Pick the best wiki URL for a bit: prefer direct EN page → fall back to
+ * EN-wiki search by FR name (better than nothing) → finally search by raw
+ * text. Never link to a French wiki or to a useless `kind:id` query. */
+function wikiUrlForBit(bit: PinnedBit, fallbackText: string): string | null {
+  if (bit.resolved_name_en) return directWikiUrl(bit.resolved_name_en);
+  if (bit.resolved_name) return searchWikiUrl(bit.resolved_name);
+  if (fallbackText.length > 0) return searchWikiUrl(fallbackText);
+  return null;
 }
 
 function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
@@ -29,13 +45,7 @@ function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
       subLines.push(candidate);
     }
   }
-  const wikiQuery = bit.resolved_name
-    ? bit.resolved_name
-    : bit.ref_id !== null && bit.kind !== "Text"
-      ? `${bit.kind}:${bit.ref_id}`
-      : hasText
-        ? bit.text
-        : null;
+  const wikiHref = wikiUrlForBit(bit, cleanText);
   const rowClass = bit.done
     ? "opacity-40"
     : urgent
@@ -63,13 +73,13 @@ function BitRow({ bit, urgent }: { bit: PinnedBit; urgent: boolean }) {
             </div>
           ))}
       </div>
-      {wikiQuery && (
+      {wikiHref && (
         <a
           className="opacity-50 hover:opacity-100 text-[10px] mt-0.5"
-          href={searchWikiUrl(wikiQuery)}
+          href={wikiHref}
           target="_blank"
           rel="noreferrer"
-          title="Open wiki"
+          title="Open on the English wiki"
         >
           🔗
         </a>

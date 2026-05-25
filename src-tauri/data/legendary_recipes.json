@@ -1,10 +1,10 @@
 {
   "_meta": {
     "description": "Curated legendary recipe components + per-legendary references. Recipes are intentionally one-level-deep (the curator decides which sub-gifts to expand into leaves vs. leave as 'specific work'). Item IDs sourced from https://wiki.guildwars2.com/ and verified against https://api.guildwars2.com/v2/items?ids=... — items with uncertain IDs are marked in `notes`. Add new legendaries by referencing existing components + adding the precursor + signature high-value ingredients as direct leaves.",
-    "format_version": "1.2",
-    "last_updated": "2026-05-25",
+    "format_version": "1.3",
+    "last_updated": "2026-05-26",
     "verification_method": "GET /v2/items?ids=<csv>&lang=en — compare returned name to the leaf name field",
-    "scope_note": "All 32 legendary collections covered. Shared components: gift_of_fortune, gift_of_mastery, mystic_tribute, gen1_signature, vision_crystal. As of 1.2 the vision_crystal component flattens to its raw upstream mats (Bloodstone Dust ×100, Dragonite Ore ×100, Empyreal Fragment ×100, Augur's Stone) since players typically hold the raw form rather than tier-6 intermediates."
+    "scope_note": "All 32 legendary collections covered. Shared components: gift_of_fortune, gift_of_mastery, mystic_tribute, gen1_signature, vision_crystal. As of 1.2 the vision_crystal component flattens to its raw upstream mats (Bloodstone Dust ×100, Dragonite Ore ×100, Empyreal Fragment ×100, Augur's Stone) since players typically hold the raw form rather than tier-6 intermediates. 1.3 additions: (a) Aurora/Vision/Coalescence now carry the real LWS3/LWS4/raid-PoF map currencies and items (Blood Ruby, Petrified Wood, Kralkatite Ore, Funerary Incense, etc.) as direct leaves, replacing the v1.2 low-fidelity placeholders; (b) Ad Infinitum carries an expanded fractal spend (Pristine Fractal Relics, agony infusions, ecto); (c) the Gen 1 craftable precursors howler and frostfang now carry bulk ascended mat leaves (Deldrimor Steel, Spiritwood Plank, Elonian Leather, ecto); (d) Gen 2 weapons (astralaria, hope, nevermore, chuka_and_champawat) now multiply Vision Crystal needs ×4 by carrying 3 additional Bloodstone Dust/Dragonite/Empyreal/Augur's Stone direct leaves on top of the 1× shared vision_crystal component."
   },
   "components": {
     "gift_of_fortune": {
@@ -52,7 +52,7 @@
     },
     "vision_crystal": {
       "name": "Vision Crystal",
-      "description": "Per-crystal upstream mats via the Mystic Forge variant: 1 Bloodstone Brick + 1 Dragonite Ingot + 1 Empyreal Star + 1 Augur's Stone. Each tier-6 intermediate is itself refined from 100 raw mats — players typically hold the raw mats rather than the bricks/ingots/stars, so this component flattens to the raw form so 'owned' counts the user's bank stacks directly. Legendaries that need N Vision Crystals (most Gen 2 weapons use 4) should multiply these quantities accordingly via additional direct leaves; the per-legendary entries currently treat this as 1× which is the floor.",
+      "description": "Per-crystal upstream mats via the Mystic Forge variant: 1 Bloodstone Brick + 1 Dragonite Ingot + 1 Empyreal Star + 1 Augur's Stone. Each tier-6 intermediate is itself refined from 100 raw mats — players typically hold the raw mats rather than the bricks/ingots/stars, so this component flattens to the raw form so 'owned' counts the user's bank stacks directly. Legendaries that need N Vision Crystals (most Gen 2 weapons use 4) multiply these quantities accordingly via additional direct leaves on the per-legendary entry; this shared component contributes 1× (the floor).",
       "leaves": [
         { "kind": "item", "id": 46731, "quantity": 100, "name": "Pile of Bloodstone Dust" },
         { "kind": "item", "id": 46733, "quantity": 100, "name": "Dragonite Ore" },
@@ -113,9 +113,12 @@
       "leaves": [
         { "kind": "item", "id": 29166, "quantity": 1, "name": "Tooth of Frostfang (Frostfang Precursor)" },
         { "kind": "item", "id": 24340, "quantity": 100, "name": "Corrupted Lodestone" },
-        { "kind": "item", "id": 24320, "quantity": 100, "name": "Glacial Lodestone" }
+        { "kind": "item", "id": 24320, "quantity": 100, "name": "Glacial Lodestone" },
+        { "kind": "item", "id": 46738, "quantity": 30, "name": "Deldrimor Steel Ingot", "notes": "craftable precursor — these are the bulk ascended mats needed (Tier 1-3 precursor crafting), approximation across all tiers" },
+        { "kind": "item", "id": 46736, "quantity": 10, "name": "Spiritwood Plank", "notes": "craftable precursor — approximate haft / handle mats" },
+        { "kind": "item", "id": 19721, "quantity": 30, "name": "Glob of Ectoplasm", "notes": "craftable precursor — approximate additional ecto on top of Gift of Fortune's 250" }
       ],
-      "notes": "Gen 1 axe. Gift of Ice uses 100 Corrupted + 100 Glacial Lodestones."
+      "notes": "Gen 1 axe. Gift of Ice uses 100 Corrupted + 100 Glacial Lodestones. Tooth of Frostfang precursor is craftable via the Tier 1/2/3 precursor collections — ascended mats listed are an approximation of the bulk weaponsmith spend."
     },
     {
       "collection_key": "howler",
@@ -123,9 +126,13 @@
       "leaves": [
         { "kind": "item", "id": 29184, "quantity": 1, "name": "Howl (Howler Precursor)" },
         { "kind": "item", "id": 24310, "quantity": 100, "name": "Onyx Lodestone" },
-        { "kind": "item", "id": 24320, "quantity": 100, "name": "Glacial Lodestone" }
+        { "kind": "item", "id": 24320, "quantity": 100, "name": "Glacial Lodestone" },
+        { "kind": "item", "id": 46738, "quantity": 30, "name": "Deldrimor Steel Ingot", "notes": "craftable precursor — bulk ascended mats for the Tier 1/2/3 collections, approximation" },
+        { "kind": "item", "id": 46736, "quantity": 10, "name": "Spiritwood Plank", "notes": "craftable precursor — approximate" },
+        { "kind": "item", "id": 46739, "quantity": 10, "name": "Elonian Leather Square", "notes": "craftable precursor — approximate leather wrap mats" },
+        { "kind": "item", "id": 19721, "quantity": 30, "name": "Glob of Ectoplasm", "notes": "craftable precursor — approximate additional ecto on top of Gift of Fortune's 250" }
       ],
-      "notes": "Gen 1 warhorn. One of the cheapest Gen 1s — precursor is craftable. Gift of Howl uses Onyx + Glacial Lodestones."
+      "notes": "Gen 1 warhorn. One of the cheapest Gen 1s — precursor is craftable. Gift of Howl uses Onyx + Glacial Lodestones. Ascended mats listed are an approximation of the bulk huntsman/leatherworker spend across all 3 precursor tiers."
     },
     {
       "collection_key": "incinerator",
@@ -248,35 +255,51 @@
       "components": ["mystic_tribute", "gift_of_mastery", "vision_crystal"],
       "leaves": [
         { "kind": "item", "id": 71426, "quantity": 1, "name": "The Mechanism (Astralaria Precursor)", "notes": "account-bound precursor, but the item id still works for owned-count" },
-        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" }
+        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" },
+        { "kind": "item", "id": 46731, "quantity": 300, "name": "Pile of Bloodstone Dust", "notes": "Gen 2 uses 4× Vision Crystals; shared vision_crystal component covers 1×, this adds the remaining 3×" },
+        { "kind": "item", "id": 46733, "quantity": 300, "name": "Dragonite Ore", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46735, "quantity": 300, "name": "Empyreal Fragment", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46752, "quantity": 3, "name": "Augur's Stone", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" }
       ],
-      "notes": "Gen 2 axe. Real recipe also wants Gift of Astralaria + Gift of Maguuma Mastery — not modelled here."
+      "notes": "Gen 2 axe. Real recipe also wants Gift of Astralaria + Gift of Maguuma Mastery — not modelled here. Uses 4 Vision Crystals total (one per sub-gift)."
     },
     {
       "collection_key": "hope",
       "components": ["mystic_tribute", "gift_of_mastery", "vision_crystal"],
       "leaves": [
         { "kind": "item", "id": 76399, "quantity": 1, "name": "Prototype (HOPE Precursor)", "notes": "account-bound precursor" },
-        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" }
+        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" },
+        { "kind": "item", "id": 46731, "quantity": 300, "name": "Pile of Bloodstone Dust", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46733, "quantity": 300, "name": "Dragonite Ore", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46735, "quantity": 300, "name": "Empyreal Fragment", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46752, "quantity": 3, "name": "Augur's Stone", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" }
       ],
-      "notes": "Gen 2 focus. Real recipe also wants Gift of HOPE + Gift of Maguuma Mastery — not modelled here."
+      "notes": "Gen 2 focus. Real recipe also wants Gift of HOPE + Gift of Maguuma Mastery — not modelled here. Uses 4 Vision Crystals total."
     },
     {
       "collection_key": "nevermore",
       "components": ["mystic_tribute", "gift_of_mastery", "vision_crystal"],
       "leaves": [
         { "kind": "item", "id": 74068, "quantity": 1, "name": "The Raven Staff (Nevermore Precursor)", "notes": "account-bound precursor" },
-        { "kind": "item", "id": 24310, "quantity": 100, "name": "Onyx Lodestone" }
+        { "kind": "item", "id": 24310, "quantity": 100, "name": "Onyx Lodestone" },
+        { "kind": "item", "id": 46731, "quantity": 300, "name": "Pile of Bloodstone Dust", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46733, "quantity": 300, "name": "Dragonite Ore", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46735, "quantity": 300, "name": "Empyreal Fragment", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46752, "quantity": 3, "name": "Augur's Stone", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" }
       ],
-      "notes": "Gen 2 staff. Real recipe also wants Gift of Nevermore + Gift of Maguuma Mastery — not modelled here."
+      "notes": "Gen 2 staff. Real recipe also wants Gift of Nevermore + Gift of Maguuma Mastery — not modelled here. Uses 4 Vision Crystals total."
     },
     {
       "collection_key": "chuka_and_champawat",
       "components": ["mystic_tribute", "gift_of_mastery", "vision_crystal"],
       "leaves": [
-        { "kind": "item", "id": 78425, "quantity": 1, "name": "Tigris (Chuka and Champawat Precursor)", "notes": "account-bound precursor" }
+        { "kind": "item", "id": 78425, "quantity": 1, "name": "Tigris (Chuka and Champawat Precursor)", "notes": "account-bound precursor" },
+        { "kind": "item", "id": 46731, "quantity": 300, "name": "Pile of Bloodstone Dust", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46733, "quantity": 300, "name": "Dragonite Ore", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46735, "quantity": 300, "name": "Empyreal Fragment", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" },
+        { "kind": "item", "id": 46752, "quantity": 3, "name": "Augur's Stone", "notes": "Gen 2 uses 4× Vision Crystals; extra 3× beyond the shared component" }
       ],
-      "notes": "Gen 2 shortbow. Real recipe also wants Gift of Chuka and Champawat + Gift of Maguuma Mastery — not modelled here."
+      "notes": "Gen 2 shortbow. Real recipe also wants Gift of Chuka and Champawat + Gift of Maguuma Mastery — not modelled here. Uses 4 Vision Crystals total."
     },
     {
       "collection_key": "klobjarne_geirr",
@@ -291,40 +314,59 @@
       "collection_key": "aurora",
       "components": ["mystic_tribute"],
       "leaves": [
-        { "kind": "currency", "id": 32, "quantity": 1000, "name": "Unbound Magic", "notes": "approximate aggregate across all 6 LWS3 map currencies" },
-        { "kind": "item", "id": 19925, "quantity": 250, "name": "Obsidian Shard" }
+        { "kind": "currency", "id": 32, "quantity": 1000, "name": "Unbound Magic", "notes": "approximate aggregate spend across all 6 LWS3 collection chapters (vendor purchases, key sinks, etc.)" },
+        { "kind": "item", "id": 79184, "quantity": 1, "name": "Bloodstone Capacitor", "notes": "purchased from Scholar Rakka in Bloodstone Fen for 100 Unbound Magic — referenced via the Aurora collection" },
+        { "kind": "item", "id": 79280, "quantity": 250, "name": "Blood Ruby", "notes": "Bloodstone Fen (Gift of Draconic Mastery) — approximate per-map spend" },
+        { "kind": "item", "id": 79469, "quantity": 250, "name": "Petrified Wood", "notes": "Ember Bay — approximate per-map spend" },
+        { "kind": "item", "id": 79899, "quantity": 250, "name": "Fresh Winterberry", "notes": "Bitterfrost Frontier — approximate per-map spend" },
+        { "kind": "item", "id": 80332, "quantity": 250, "name": "Jade Shard", "notes": "Lake Doric — approximate per-map spend" },
+        { "kind": "item", "id": 81706, "quantity": 250, "name": "Orrian Pearl", "notes": "Siren's Landing — approximate per-map spend" },
+        { "kind": "item", "id": 81127, "quantity": 250, "name": "Fire Orchid Blossom", "notes": "Draconis Mons — approximate per-map spend" },
+        { "kind": "item", "id": 19925, "quantity": 250, "name": "Obsidian Shard", "notes": "approximate, mostly for Mystic Clover crafting overflow" }
       ],
-      "notes": "LWS3 trinket made purely through the collection achievement (no Mystic Forge final step). Real progress lives in the collection bits — the leaves listed here are a low-fidelity approximation of total spend across the 24 collection steps."
+      "notes": "LWS3 trinket. Built purely through a long collection chain (no Mystic Forge final step). Real progress lives in the 24 collection steps; quantities listed are wiki-based approximations of the largest spend per map currency."
     },
     {
       "collection_key": "vision",
       "components": ["mystic_tribute"],
       "leaves": [
-        { "kind": "currency", "id": 45, "quantity": 1000, "name": "Volatile Magic", "notes": "approximate aggregate across LWS4 maps" },
-        { "kind": "item", "id": 19925, "quantity": 250, "name": "Obsidian Shard" }
+        { "kind": "currency", "id": 45, "quantity": 1000, "name": "Volatile Magic", "notes": "approximate aggregate across LWS4 maps (Trance Stone unlock + vendor purchases)" },
+        { "kind": "currency", "id": 35, "quantity": 100, "name": "Elegy Mosaic", "notes": "PoF / LWS4 universal currency — approximate spend across the collection" },
+        { "kind": "item", "id": 86069, "quantity": 100, "name": "Kralkatite Ore", "notes": "Domain of Istan — wiki: 100 needed for Vision crafting steps" },
+        { "kind": "item", "id": 86977, "quantity": 100, "name": "Difluorite Crystal", "notes": "Sandswept Isles — wiki: 100 needed" },
+        { "kind": "item", "id": 87645, "quantity": 100, "name": "Inscribed Shard", "notes": "Domain of Kourna — wiki: 100 needed" },
+        { "kind": "item", "id": 88955, "quantity": 100, "name": "Lump of Mistonium", "notes": "Jahai Bluffs — wiki: 100 needed" },
+        { "kind": "item", "id": 89537, "quantity": 100, "name": "Branded Mass", "notes": "Thunderhead Peaks — wiki: 100 needed" },
+        { "kind": "item", "id": 90783, "quantity": 100, "name": "Mistborn Mote", "notes": "Dragonfall — wiki: 100 needed" },
+        { "kind": "item", "id": 19925, "quantity": 100, "name": "Obsidian Shard" }
       ],
-      "notes": "LWS4 trinket built through the Vision I+II collection chain. Real progress lives in the collection bits — leaves here are a low-fidelity approximation."
+      "notes": "LWS4 trinket built through the Vision I+II collection chain. Per the wiki Vision needs 100 of each LWS4 map currency item. Volatile Magic + Elegy Mosaic quantities are approximations of the aggregate vendor / unlock spend."
     },
     {
       "collection_key": "coalescence",
       "components": ["mystic_tribute"],
       "leaves": [
         { "kind": "currency", "id": 70, "quantity": 150, "name": "Legendary Insight", "notes": "150 LI required across the collection" },
+        { "kind": "item", "id": 86093, "quantity": 250, "name": "Funerary Incense", "notes": "PoF crafting currency — approximate Coalescence spend" },
+        { "kind": "item", "id": 71994, "quantity": 6, "name": "Ball of Dark Energy", "notes": "wiki: 6 needed (raid drop)" },
+        { "kind": "item", "id": 43772, "quantity": 100, "name": "Charged Quartz Crystal", "notes": "time-gated daily craft — approximate aggregate need across the collection" },
         { "kind": "item", "id": 19925, "quantity": 250, "name": "Obsidian Shard" }
       ],
-      "notes": "PoF + raid trinket. Requires Funerary Incense, Balls of Dark Energy, 150 Legendary Insights — leaves here are a low-fidelity approximation. Progress mainly lives in the collection achievement."
+      "notes": "PoF + raid trinket. Requires Funerary Incense, 6 Balls of Dark Energy, and 150 Legendary Insights per the wiki. Progress mainly lives in the collection achievement — quantities are wiki-aligned approximations."
     },
     {
       "collection_key": "ad_infinitum",
       "components": [],
       "leaves": [
-        { "kind": "currency", "id": 7, "quantity": 1500, "name": "Fractal Relic" },
-        { "kind": "currency", "id": 24, "quantity": 30, "name": "Pristine Fractal Relic" },
-        { "kind": "item", "id": 73248, "quantity": 100, "name": "Stabilizing Matrix" },
-        { "kind": "item", "id": 19721, "quantity": 50, "name": "Glob of Ectoplasm" },
-        { "kind": "item", "id": 49424, "quantity": 1, "name": "+1 Agony Infusion", "notes": "many higher-tier agony infusions also required — placeholder" }
+        { "kind": "currency", "id": 7, "quantity": 2000, "name": "Fractal Relic", "notes": "approximate sum across all 4 tiers (Gift of Ascension alone costs 500; vendor purchases add more)" },
+        { "kind": "currency", "id": 24, "quantity": 30, "name": "Pristine Fractal Relic", "notes": "approximate, used on Mystic Aspect / vendor purchases" },
+        { "kind": "item", "id": 73248, "quantity": 100, "name": "Stabilizing Matrix", "notes": "approximate, used heavily in the Tier 1-3 fractal back crafting" },
+        { "kind": "item", "id": 19721, "quantity": 250, "name": "Glob of Ectoplasm", "notes": "approximate ecto spend across all 4 tiers" },
+        { "kind": "item", "id": 49424, "quantity": 50, "name": "+1 Agony Infusion", "notes": "approximate — many higher-tier agony infusions also required to climb through the tiers" },
+        { "kind": "item", "id": 19925, "quantity": 100, "name": "Obsidian Shard", "notes": "approximate, used in Gift of Ascension / Mystic Aspect" },
+        { "kind": "item", "id": 74155, "quantity": 1, "name": "Ad Infinitum (final back item)", "notes": "the final crafted legendary itself — owned-count check tells the overlay you finished" }
       ],
-      "notes": "Fractal back-piece. Tier 1 (Finite Result) → Tier 4 (Ad Infinitum). Most cost lives in Fractal Relics, ascended materials, and the collection achievements themselves."
+      "notes": "Fractal back-piece. Tier 1 (Finite Result) → Tier 4 (Ad Infinitum). Most cost lives in Fractal Relics, Stabilizing Matrices, agony infusions, and the collection achievements. Quantities are wiki-aligned approximations across all 4 tiers."
     },
     {
       "collection_key": "envoy_armor",

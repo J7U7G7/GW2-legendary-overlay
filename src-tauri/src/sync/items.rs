@@ -2,7 +2,7 @@ use rusqlite::params;
 use tracing::{debug, info};
 
 use crate::api::client::ApiClient;
-use crate::api::endpoints::{ItemDetail, get_items_batch};
+use crate::api::endpoints::{ItemDetail, get_items_batch, get_items_batch_en};
 use crate::db::repository::Db;
 use crate::error::Result;
 
@@ -59,31 +59,47 @@ pub fn find_missing_item_ids(db: &Db) -> Result<Vec<u32>> {
 }
 
 /// Fetch `/v2/items` for the given ids (in 200-id batches) and upsert into
-/// `items_cache`. Returns the number of rows written.
+/// `items_cache`. Fetches BOTH French (display) and English (wiki link)
+/// names in parallel — the FR name lands in `name`, the EN name in
+/// `name_en`. Returns the number of (lang=fr) rows written.
 pub async fn fetch_and_cache_items(client: &ApiClient, db: &Db, ids: &[u32]) -> Result<usize> {
     if ids.is_empty() {
         return Ok(0);
     }
-    info!(count = ids.len(), "fetching items into cache");
+    info!(count = ids.len(), "fetching items into cache (fr + en)");
     let mut total = 0usize;
     for chunk in ids.chunks(BATCH_SIZE) {
-        let items = get_items_batch(client, chunk).await?;
-        debug!(returned = items.len(), "batch fetched");
-        upsert_items(db, &items)?;
-        total += items.len();
+        let (items_fr, items_en) = tokio::join!(
+            get_items_batch(client, chunk),
+            get_items_batch_en(client, chunk),
+        );
+        let items_fr = items_fr?;
+        let items_en = items_en?;
+        debug!(returned_fr = items_fr.len(), returned_en = items_en.len(), "batch fetched");
+        let en_by_id: std::collections::HashMap<u32, String> = items_en
+            .into_iter()
+            .map(|i| (i.id, i.name))
+            .collect();
+        upsert_items(db, &items_fr, &en_by_id)?;
+        total += items_fr.len();
     }
     Ok(total)
 }
 
-fn upsert_items(db: &Db, items: &[ItemDetail]) -> Result<()> {
+fn upsert_items(
+    db: &Db,
+    items: &[ItemDetail],
+    en_by_id: &std::collections::HashMap<u32, String>,
+) -> Result<()> {
     db.with_conn(|c| {
         let tx = c.unchecked_transaction()?;
         {
             let mut stmt = tx.prepare(
-                "INSERT INTO items_cache (id, name, type, rarity, icon, description, last_synced)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, CURRENT_TIMESTAMP)
+                "INSERT INTO items_cache (id, name, name_en, type, rarity, icon, description, last_synced)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, CURRENT_TIMESTAMP)
                  ON CONFLICT(id) DO UPDATE SET
                     name = excluded.name,
+                    name_en = excluded.name_en,
                     type = excluded.type,
                     rarity = excluded.rarity,
                     icon = excluded.icon,
@@ -91,9 +107,11 @@ fn upsert_items(db: &Db, items: &[ItemDetail]) -> Result<()> {
                     last_synced = CURRENT_TIMESTAMP",
             )?;
             for item in items {
+                let name_en = en_by_id.get(&item.id).cloned();
                 stmt.execute(params![
                     item.id,
                     item.name,
+                    name_en,
                     item.kind,
                     item.rarity,
                     item.icon,
@@ -109,6 +127,7 @@ fn upsert_items(db: &Db, items: &[ItemDetail]) -> Result<()> {
 #[derive(Debug, Clone)]
 pub struct CachedItem {
     pub name: String,
+    pub name_en: Option<String>,
     pub rarity: Option<String>,
     pub description: Option<String>,
 }
@@ -124,7 +143,7 @@ pub fn lookup_items(
     db.with_conn(|c| {
         let placeholders = std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
         let sql = format!(
-            "SELECT id, name, rarity, description FROM items_cache WHERE id IN ({placeholders})"
+            "SELECT id, name, name_en, rarity, description FROM items_cache WHERE id IN ({placeholders})"
         );
         let mut stmt = c.prepare(&sql)?;
         let params: Vec<rusqlite::types::Value> = ids
@@ -137,8 +156,9 @@ pub fn lookup_items(
                     r.get::<_, i64>(0)? as u32,
                     CachedItem {
                         name: r.get(1)?,
-                        rarity: r.get(2)?,
-                        description: r.get(3)?,
+                        name_en: r.get(2)?,
+                        rarity: r.get(3)?,
+                        description: r.get(4)?,
                     },
                 ))
             })?

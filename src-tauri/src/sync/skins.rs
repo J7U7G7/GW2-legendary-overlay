@@ -10,7 +10,7 @@ use rusqlite::params;
 use tracing::{debug, info};
 
 use crate::api::client::ApiClient;
-use crate::api::endpoints::{SkinDetail, get_skins_batch};
+use crate::api::endpoints::{SkinDetail, get_skins_batch, get_skins_batch_en};
 use crate::db::repository::Db;
 use crate::error::Result;
 
@@ -65,26 +65,40 @@ pub async fn fetch_and_cache_skins(client: &ApiClient, db: &Db, ids: &[u32]) -> 
     if ids.is_empty() {
         return Ok(0);
     }
-    info!(count = ids.len(), "fetching skins into cache");
+    info!(count = ids.len(), "fetching skins into cache (fr + en)");
     let mut total = 0usize;
     for chunk in ids.chunks(BATCH_SIZE) {
-        let skins = get_skins_batch(client, chunk).await?;
-        debug!(returned = skins.len(), "skin batch fetched");
-        upsert_skins(db, &skins)?;
-        total += skins.len();
+        let (skins_fr, skins_en) = tokio::join!(
+            get_skins_batch(client, chunk),
+            get_skins_batch_en(client, chunk),
+        );
+        let skins_fr = skins_fr?;
+        let skins_en = skins_en?;
+        debug!(returned_fr = skins_fr.len(), returned_en = skins_en.len(), "skin batch fetched");
+        let en_by_id: std::collections::HashMap<u32, String> = skins_en
+            .into_iter()
+            .map(|s| (s.id, s.name))
+            .collect();
+        upsert_skins(db, &skins_fr, &en_by_id)?;
+        total += skins_fr.len();
     }
     Ok(total)
 }
 
-fn upsert_skins(db: &Db, skins: &[SkinDetail]) -> Result<()> {
+fn upsert_skins(
+    db: &Db,
+    skins: &[SkinDetail],
+    en_by_id: &std::collections::HashMap<u32, String>,
+) -> Result<()> {
     db.with_conn(|c| {
         let tx = c.unchecked_transaction()?;
         {
             let mut stmt = tx.prepare(
-                "INSERT INTO skins_cache (id, name, type, rarity, icon, description, last_synced)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, CURRENT_TIMESTAMP)
+                "INSERT INTO skins_cache (id, name, name_en, type, rarity, icon, description, last_synced)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, CURRENT_TIMESTAMP)
                  ON CONFLICT(id) DO UPDATE SET
                     name = excluded.name,
+                    name_en = excluded.name_en,
                     type = excluded.type,
                     rarity = excluded.rarity,
                     icon = excluded.icon,
@@ -92,9 +106,11 @@ fn upsert_skins(db: &Db, skins: &[SkinDetail]) -> Result<()> {
                     last_synced = CURRENT_TIMESTAMP",
             )?;
             for skin in skins {
+                let name_en = en_by_id.get(&skin.id).cloned();
                 stmt.execute(params![
                     skin.id,
                     skin.name,
+                    name_en,
                     skin.kind,
                     skin.rarity,
                     skin.icon,
@@ -110,6 +126,7 @@ fn upsert_skins(db: &Db, skins: &[SkinDetail]) -> Result<()> {
 #[derive(Debug, Clone)]
 pub struct CachedSkin {
     pub name: String,
+    pub name_en: Option<String>,
     pub rarity: Option<String>,
     pub description: Option<String>,
 }
@@ -124,7 +141,7 @@ pub fn lookup_skins(
     db.with_conn(|c| {
         let placeholders = std::iter::repeat_n("?", ids.len()).collect::<Vec<_>>().join(",");
         let sql = format!(
-            "SELECT id, name, rarity, description FROM skins_cache WHERE id IN ({placeholders})"
+            "SELECT id, name, name_en, rarity, description FROM skins_cache WHERE id IN ({placeholders})"
         );
         let mut stmt = c.prepare(&sql)?;
         let params: Vec<rusqlite::types::Value> = ids
@@ -137,8 +154,9 @@ pub fn lookup_skins(
                     r.get::<_, i64>(0)? as u32,
                     CachedSkin {
                         name: r.get(1)?,
-                        rarity: r.get(2)?,
-                        description: r.get(3)?,
+                        name_en: r.get(2)?,
+                        rarity: r.get(3)?,
+                        description: r.get(4)?,
                     },
                 ))
             })?

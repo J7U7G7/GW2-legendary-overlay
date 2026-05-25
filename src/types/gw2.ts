@@ -170,6 +170,10 @@ export type PinnedBit = {
   text: string | null;
   done: boolean;
   resolved_name: string | null;
+  /** English name of the resolved Item/Skin — used to build a wiki link
+   * that deep-links to the canonical English page. Falls back to null when
+   * the bit is unresolved or its cached row predates schema v9. */
+  resolved_name_en: string | null;
   resolved_description: string | null;
   resolved_rarity: string | null;
 };

@@ -20,6 +20,9 @@ const MIGRATIONS: &[&str] = &[
     WALLET_SCHEMA,
     // v8: skins cache (resolves Skin-typed bits — e.g. Obsidian Armor steps)
     SKINS_CACHE_SCHEMA,
+    // v9: EN names for items + skins so wiki links can deep-link to the
+    //     canonical English page instead of broken FR-name searches
+    BILINGUAL_NAMES_SCHEMA,
 ];
 
 const INITIAL_SCHEMA: &str = r#"
@@ -172,6 +175,11 @@ const SKINS_CACHE_SCHEMA: &str = r#"
         icon TEXT,
         last_synced TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+"#;
+
+const BILINGUAL_NAMES_SCHEMA: &str = r#"
+    ALTER TABLE items_cache ADD COLUMN name_en TEXT;
+    ALTER TABLE skins_cache ADD COLUMN name_en TEXT;
 "#;
 
 const WALLET_SCHEMA: &str = r#"
