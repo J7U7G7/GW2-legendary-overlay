@@ -91,7 +91,12 @@ jobs:
             exit 1
           }
           $signature = Get-Content $sig.FullName -Raw
-          $assetUrl = "https://github.com/${{ github.repository }}/releases/download/$tag/$($exe.Name)"
+          # GitHub Releases replaces spaces with dots in the download URL of
+          # uploaded assets, even though the asset object itself keeps the
+          # original name. Mirror that transformation here or the updater
+          # client will request a URL that 404s.
+          $urlName = $exe.Name -replace ' ', '.'
+          $assetUrl = "https://github.com/${{ github.repository }}/releases/download/$tag/$urlName"
           $manifest = @{
             version   = $version
             notes     = "See the release page for details."
