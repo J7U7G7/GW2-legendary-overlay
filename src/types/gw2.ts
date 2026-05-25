@@ -135,6 +135,27 @@ export type LegendaryCollection = {
   done_count: number;
 };
 
+export type LeafKind = "item" | "currency";
+
+export type MissingLeaf = {
+  kind: LeafKind;
+  id: number;
+  name: string;
+  needed: number;
+  owned: number;
+  missing: number;
+};
+
+export type LegendaryProgress = {
+  collection_key: string;
+  total_needed: number;
+  total_owned: number;
+  ratio: number;
+  leaves_total: number;
+  leaves_complete: number;
+  top_missing: MissingLeaf[];
+};
+
 export type PinnedBit = {
   index: number;
   kind: string;

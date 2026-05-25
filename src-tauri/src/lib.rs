@@ -3,6 +3,7 @@ pub mod builds;
 pub mod catalog;
 pub mod db;
 pub mod error;
+pub mod legendary;
 pub mod scorer;
 pub mod sync;
 pub mod timers;
@@ -85,6 +86,7 @@ pub fn run() {
             commands::cmd_toggle_todo,
             commands::cmd_delete_todo,
             commands::cmd_list_builds,
+            commands::cmd_legendary_progress,
         ])
         .setup(|app| {
             let app_dir = app.path().app_data_dir().expect("no app data dir");

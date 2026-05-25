@@ -215,6 +215,63 @@ pub async fn cmd_save_state_and_quit(app: tauri::AppHandle) -> Result<()> {
 // ============================================================================
 
 #[tauri::command]
+pub async fn cmd_legendary_progress(
+    state: State<'_, AppState>,
+) -> Result<Vec<crate::legendary::LegendaryProgress>> {
+    use std::collections::HashMap;
+    let catalog = crate::legendary::load()?;
+
+    // Owned items: sum counts across every location (bank, materials, shared,
+    // every character's bags + equipment).
+    let owned_items: HashMap<u32, i64> = state.db.with_conn(|c| {
+        let mut stmt = c.prepare(
+            "SELECT item_id, SUM(count) FROM account_items GROUP BY item_id",
+        )?;
+        let mapped = stmt.query_map([], |r| {
+            Ok((r.get::<_, i64>(0)? as u32, r.get::<_, i64>(1)?))
+        })?;
+        let mut out: HashMap<u32, i64> = HashMap::new();
+        for row in mapped {
+            let (id, n) = row?;
+            out.insert(id, n);
+        }
+        Ok(out)
+    })?;
+
+    let owned_currencies: HashMap<u32, i64> = state.db.with_conn(|c| {
+        let mut stmt = c.prepare("SELECT currency_id, value FROM account_currencies")?;
+        let mapped = stmt.query_map([], |r| {
+            Ok((r.get::<_, i64>(0)? as u32, r.get::<_, i64>(1)?))
+        })?;
+        let mut out: HashMap<u32, i64> = HashMap::new();
+        for row in mapped {
+            let (id, v) = row?;
+            out.insert(id, v);
+        }
+        Ok(out)
+    })?;
+
+    let mut progress: Vec<_> = catalog
+        .legendaries
+        .iter()
+        .map(|rec| {
+            crate::legendary::compute_progress(&catalog, rec, &owned_items, &owned_currencies, 5)
+        })
+        .collect();
+
+    // Sort by completion ratio descending — "closest to done" first. Ties
+    // broken by collection_key alphabetical.
+    progress.sort_by(|a, b| {
+        b.ratio
+            .partial_cmp(&a.ratio)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.collection_key.cmp(&b.collection_key))
+    });
+
+    Ok(progress)
+}
+
+#[tauri::command]
 pub async fn cmd_list_builds(profession: Option<String>) -> Result<Vec<crate::builds::Build>> {
     let all = crate::builds::load_all()?;
     Ok(match profession {

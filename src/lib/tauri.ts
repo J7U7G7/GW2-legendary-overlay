@@ -9,6 +9,7 @@ import type {
   Build,
   EventView,
   LegendaryCollection,
+  LegendaryProgress,
   PinnedView,
   ProgressSummary,
   SyncReport,
@@ -62,4 +63,5 @@ export const api = {
   deleteTodo: (id: number) => invoke<void>("cmd_delete_todo", { id }),
   listBuilds: (profession?: string) =>
     invoke<Build[]>("cmd_list_builds", { profession: profession ?? null }),
+  legendaryProgress: () => invoke<LegendaryProgress[]>("cmd_legendary_progress"),
 };

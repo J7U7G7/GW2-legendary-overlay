@@ -1,0 +1,94 @@
+{
+  "_meta": {
+    "description": "Curated legendary recipe components + per-legendary references. Recipes are intentionally one-level-deep (the curator decides which sub-gifts to expand into leaves vs. leave as 'specific work'). Item IDs sourced from https://wiki.guildwars2.com/ and https://api.guildwars2.com/v2/items?ids=... — items with uncertain IDs are marked in `notes` and should be verified against the live API. Add new legendaries by referencing existing components + adding the precursor + signature high-value ingredients as direct leaves.",
+    "format_version": "1.0",
+    "last_updated": "2026-05-24",
+    "verification_method": "GET /v2/items?ids=<csv>&lang=en — compare returned name to the leaf name field",
+    "scope_note": "First iteration ships 3 shared components + 5 sample legendaries (Bolt, Howler, Astralaria, Aurora, Ad Infinitum). Extend by adding components and listing them under additional legendaries."
+  },
+  "components": {
+    "gift_of_fortune": {
+      "name": "Gift of Fortune",
+      "description": "Required by every Gen 1 legendary weapon. Mystic Forge: Gift of Magic + Gift of Might + 77 Mystic Clovers + 250 Glob of Ectoplasm. The leaves below flatten Gift of Magic/Might into their raw mats since players track those directly.",
+      "leaves": [
+        { "kind": "item", "id": 19925, "quantity": 250, "name": "Glob of Ectoplasm" },
+        { "kind": "item", "id": 19675, "quantity": 77, "name": "Mystic Clover" },
+        { "kind": "item", "id": 19976, "quantity": 100, "name": "Mystic Coin" },
+        { "kind": "item", "id": 24277, "quantity": 250, "name": "Pile of Crystalline Dust", "notes": "id TBV" },
+        { "kind": "item", "id": 24295, "quantity": 250, "name": "Vial of Powerful Blood", "notes": "id TBV" },
+        { "kind": "item", "id": 24358, "quantity": 250, "name": "Powerful Venom Sac", "notes": "id TBV" },
+        { "kind": "item", "id": 24351, "quantity": 250, "name": "Vicious Fang", "notes": "id TBV" },
+        { "kind": "item", "id": 24341, "quantity": 250, "name": "Vicious Claw", "notes": "id TBV" },
+        { "kind": "item", "id": 24345, "quantity": 250, "name": "Armored Scale", "notes": "id TBV" },
+        { "kind": "item", "id": 24299, "quantity": 250, "name": "Ancient Bone", "notes": "id TBV" },
+        { "kind": "item", "id": 24357, "quantity": 250, "name": "Powerful Blood", "notes": "id TBV; legacy stack" },
+        { "kind": "item", "id": 19684, "quantity": 250, "name": "Mithril Ingot", "notes": "id TBV" }
+      ]
+    },
+    "gift_of_mastery": {
+      "name": "Gift of Mastery",
+      "description": "Required by every Gen 1 legendary weapon. Mystic Forge: Bloodstone Shard + Gift of Battle + Gift of Exploration + Gift of Maguuma Mastery / Tyrian / etc (varies by gen). Listing only the universal four; the gen-specific mastery gift is curated per-legendary if needed.",
+      "leaves": [
+        { "kind": "item", "id": 70093, "quantity": 1, "name": "Bloodstone Shard", "notes": "200 Spirit Shards from Miyani — id TBV" },
+        { "kind": "item", "id": 20796, "quantity": 1, "name": "Gift of Battle", "notes": "WvW reward track; id TBV" },
+        { "kind": "item", "id": 19678, "quantity": 1, "name": "Gift of Exploration", "notes": "100% world completion; id TBV" }
+      ]
+    },
+    "mystic_tribute": {
+      "name": "Mystic Tribute (Gen 2)",
+      "description": "Gen 2 / Gen 2.5 equivalent of Gift of Fortune for many recipes. Mystic Forge: 2× Bloodstone Shard + 250 Mystic Coin + 250 Glob of Ectoplasm + 77 Mystic Clovers.",
+      "leaves": [
+        { "kind": "item", "id": 19976, "quantity": 250, "name": "Mystic Coin" },
+        { "kind": "item", "id": 19925, "quantity": 250, "name": "Glob of Ectoplasm" },
+        { "kind": "item", "id": 19675, "quantity": 77, "name": "Mystic Clover" },
+        { "kind": "item", "id": 70093, "quantity": 2, "name": "Bloodstone Shard", "notes": "id TBV" }
+      ]
+    }
+  },
+  "legendaries": [
+    {
+      "collection_key": "bolt",
+      "components": ["gift_of_fortune", "gift_of_mastery"],
+      "leaves": [
+        { "kind": "item", "id": 30689, "quantity": 1, "name": "Zap (Bolt Precursor)", "notes": "id TBV" }
+      ],
+      "notes": "Gen 1 sword. Specific gift 'Gift of Quickness' not modelled: it needs 100 Charged Lodestone + 250 Vial of Powerful Blood + Vision Crystal + 100 Charged Cores. Add as a 'gift_of_quickness' component if you want it tracked."
+    },
+    {
+      "collection_key": "howler",
+      "components": ["gift_of_fortune", "gift_of_mastery"],
+      "leaves": [
+        { "kind": "item", "id": 30699, "quantity": 1, "name": "Howl (Howler Precursor)", "notes": "id TBV" }
+      ],
+      "notes": "Gen 1 warhorn. One of the cheapest Gen 1s — precursor is craftable. Specific gift uses Onyx + Glacial Lodestones."
+    },
+    {
+      "collection_key": "astralaria",
+      "components": ["mystic_tribute", "gift_of_mastery"],
+      "leaves": [
+        { "kind": "item", "id": 76223, "quantity": 1, "name": "The Lover (Astralaria Precursor)", "notes": "id TBV; account-bound precursor, but the legacy item id still works for owned-count" }
+      ],
+      "notes": "Gen 2 axe. Real recipe also wants Gift of Astralaria + Gift of Maguuma Mastery — not modelled here."
+    },
+    {
+      "collection_key": "aurora",
+      "components": [],
+      "leaves": [
+        { "kind": "currency", "id": 32, "quantity": 200, "name": "Unbound Magic", "notes": "Living World season 3 currency; id TBV" },
+        { "kind": "item", "id": 19925, "quantity": 100, "name": "Glob of Ectoplasm", "notes": "Used across multiple Aurora steps — placeholder aggregate" },
+        { "kind": "item", "id": 19976, "quantity": 30, "name": "Mystic Coin", "notes": "Used across multiple Aurora steps — placeholder aggregate" }
+      ],
+      "notes": "Trinket made purely through the collection achievement (no Mystic Forge final step). Real progress lives in the collection bits — the leaves listed here are a low-fidelity approximation of total spend across the 24 collection steps."
+    },
+    {
+      "collection_key": "ad_infinitum_1",
+      "components": [],
+      "leaves": [
+        { "kind": "currency", "id": 7, "quantity": 1500, "name": "Fractal Relic", "notes": "id TBV" },
+        { "kind": "currency", "id": 24, "quantity": 30, "name": "Pristine Fractal Relic", "notes": "id TBV" },
+        { "kind": "item", "id": 19925, "quantity": 50, "name": "Glob of Ectoplasm" }
+      ],
+      "notes": "Ad Infinitum Tier 1 (Fractal back). Most cost lives in Fractal Relics, ascended materials, and the collection achievement itself. Add stabilising matrices / fractal weapon drops if you want finer-grained tracking."
+    }
+  ]
+}
