@@ -1,37 +1,35 @@
 {
   "_meta": {
-    "description": "Curated legendary recipe components + per-legendary references. Recipes are intentionally one-level-deep (the curator decides which sub-gifts to expand into leaves vs. leave as 'specific work'). Item IDs sourced from https://wiki.guildwars2.com/ and https://api.guildwars2.com/v2/items?ids=... — items with uncertain IDs are marked in `notes` and should be verified against the live API. Add new legendaries by referencing existing components + adding the precursor + signature high-value ingredients as direct leaves.",
-    "format_version": "1.0",
-    "last_updated": "2026-05-24",
+    "description": "Curated legendary recipe components + per-legendary references. Recipes are intentionally one-level-deep (the curator decides which sub-gifts to expand into leaves vs. leave as 'specific work'). Item IDs sourced from https://wiki.guildwars2.com/ and verified against https://api.guildwars2.com/v2/items?ids=... — items with uncertain IDs are marked in `notes`. Add new legendaries by referencing existing components + adding the precursor + signature high-value ingredients as direct leaves.",
+    "format_version": "1.1",
+    "last_updated": "2026-05-25",
     "verification_method": "GET /v2/items?ids=<csv>&lang=en — compare returned name to the leaf name field",
-    "scope_note": "First iteration ships 3 shared components + 5 sample legendaries (Bolt, Howler, Astralaria, Aurora, Ad Infinitum). Extend by adding components and listing them under additional legendaries."
+    "scope_note": "All 32 legendary collections covered: 3 trinkets (Aurora, Vision, Coalescence), 1 backpack (Ad Infinitum), 3 armor sets (Envoy, Astral, Obsidian), 24 weapons (19 Gen 1, 4 Gen 2/HoT, 1 Janthir Wilds). Shared components are reused across legendaries; single-use signature work is inlined per legendary."
   },
   "components": {
     "gift_of_fortune": {
       "name": "Gift of Fortune",
       "description": "Required by every Gen 1 legendary weapon. Mystic Forge: Gift of Magic + Gift of Might + 77 Mystic Clovers + 250 Glob of Ectoplasm. The leaves below flatten Gift of Magic/Might into their raw mats since players track those directly.",
       "leaves": [
-        { "kind": "item", "id": 19925, "quantity": 250, "name": "Glob of Ectoplasm" },
+        { "kind": "item", "id": 19721, "quantity": 250, "name": "Glob of Ectoplasm" },
         { "kind": "item", "id": 19675, "quantity": 77, "name": "Mystic Clover" },
         { "kind": "item", "id": 19976, "quantity": 100, "name": "Mystic Coin" },
-        { "kind": "item", "id": 24277, "quantity": 250, "name": "Pile of Crystalline Dust", "notes": "id TBV" },
-        { "kind": "item", "id": 24295, "quantity": 250, "name": "Vial of Powerful Blood", "notes": "id TBV" },
-        { "kind": "item", "id": 24358, "quantity": 250, "name": "Powerful Venom Sac", "notes": "id TBV" },
-        { "kind": "item", "id": 24351, "quantity": 250, "name": "Vicious Fang", "notes": "id TBV" },
-        { "kind": "item", "id": 24341, "quantity": 250, "name": "Vicious Claw", "notes": "id TBV" },
-        { "kind": "item", "id": 24345, "quantity": 250, "name": "Armored Scale", "notes": "id TBV" },
-        { "kind": "item", "id": 24299, "quantity": 250, "name": "Ancient Bone", "notes": "id TBV" },
-        { "kind": "item", "id": 24357, "quantity": 250, "name": "Powerful Blood", "notes": "id TBV; legacy stack" },
-        { "kind": "item", "id": 19684, "quantity": 250, "name": "Mithril Ingot", "notes": "id TBV" }
+        { "kind": "item", "id": 24277, "quantity": 250, "name": "Pile of Crystalline Dust" },
+        { "kind": "item", "id": 24295, "quantity": 250, "name": "Vial of Powerful Blood" },
+        { "kind": "item", "id": 24283, "quantity": 250, "name": "Powerful Venom Sac" },
+        { "kind": "item", "id": 24357, "quantity": 250, "name": "Vicious Fang" },
+        { "kind": "item", "id": 24351, "quantity": 250, "name": "Vicious Claw" },
+        { "kind": "item", "id": 24289, "quantity": 250, "name": "Armored Scale" },
+        { "kind": "item", "id": 24358, "quantity": 250, "name": "Ancient Bone" }
       ]
     },
     "gift_of_mastery": {
       "name": "Gift of Mastery",
       "description": "Required by every Gen 1 legendary weapon. Mystic Forge: Bloodstone Shard + Gift of Battle + Gift of Exploration + Gift of Maguuma Mastery / Tyrian / etc (varies by gen). Listing only the universal four; the gen-specific mastery gift is curated per-legendary if needed.",
       "leaves": [
-        { "kind": "item", "id": 70093, "quantity": 1, "name": "Bloodstone Shard", "notes": "200 Spirit Shards from Miyani — id TBV" },
-        { "kind": "item", "id": 20796, "quantity": 1, "name": "Gift of Battle", "notes": "WvW reward track; id TBV" },
-        { "kind": "item", "id": 19678, "quantity": 1, "name": "Gift of Exploration", "notes": "100% world completion; id TBV" }
+        { "kind": "item", "id": 20797, "quantity": 1, "name": "Bloodstone Shard", "notes": "200 Spirit Shards from Miyani" },
+        { "kind": "item", "id": 19678, "quantity": 1, "name": "Gift of Battle", "notes": "WvW reward track" },
+        { "kind": "item", "id": 19677, "quantity": 1, "name": "Gift of Exploration", "notes": "100% world completion" }
       ]
     },
     "mystic_tribute": {
@@ -39,56 +37,329 @@
       "description": "Gen 2 / Gen 2.5 equivalent of Gift of Fortune for many recipes. Mystic Forge: 2× Bloodstone Shard + 250 Mystic Coin + 250 Glob of Ectoplasm + 77 Mystic Clovers.",
       "leaves": [
         { "kind": "item", "id": 19976, "quantity": 250, "name": "Mystic Coin" },
-        { "kind": "item", "id": 19925, "quantity": 250, "name": "Glob of Ectoplasm" },
+        { "kind": "item", "id": 19721, "quantity": 250, "name": "Glob of Ectoplasm" },
         { "kind": "item", "id": 19675, "quantity": 77, "name": "Mystic Clover" },
-        { "kind": "item", "id": 70093, "quantity": 2, "name": "Bloodstone Shard", "notes": "id TBV" }
+        { "kind": "item", "id": 20797, "quantity": 2, "name": "Bloodstone Shard" }
+      ]
+    },
+    "gen1_signature": {
+      "name": "Gen 1 Signature Work",
+      "description": "Materials reused across every Gen 1 'Gift of [Weapon Name]' (the Rojan-purchased component) plus the universal Gift of [Element] base. Each Gen 1 'Gift of [Weapon]' takes 100 Icy Runestones; each elemental gift takes 250 Orichalcum Ingots + 250 Bolts of Gossamer + lodestones (lodestones are curated per-legendary as direct leaves since they vary).",
+      "leaves": [
+        { "kind": "item", "id": 19676, "quantity": 100, "name": "Icy Runestone" },
+        { "kind": "item", "id": 19685, "quantity": 250, "name": "Orichalcum Ingot" }
+      ]
+    },
+    "vision_crystal": {
+      "name": "Vision Crystal",
+      "description": "Required by every Gen 2/HoT legendary weapon and by Aurora/Vision/Coalescence trinkets. Mystic Forge: Augur's Stone + 100 Mystic Coin + 50 Pile of Crystalline Dust + Mystic Forge ingredients. Listed here as a 1-quantity leaf since players track the finished item; expand if you want to model upstream mats.",
+      "leaves": [
+        { "kind": "item", "id": 46746, "quantity": 1, "name": "Vision Crystal", "notes": "verify in-game; may show as 0 owned if consumed inline" }
       ]
     }
   },
   "legendaries": [
     {
       "collection_key": "bolt",
-      "components": ["gift_of_fortune", "gift_of_mastery"],
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
       "leaves": [
-        { "kind": "item", "id": 30689, "quantity": 1, "name": "Zap (Bolt Precursor)", "notes": "id TBV" }
+        { "kind": "item", "id": 29181, "quantity": 1, "name": "Zap (Bolt Precursor)" },
+        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" }
       ],
-      "notes": "Gen 1 sword. Specific gift 'Gift of Quickness' not modelled: it needs 100 Charged Lodestone + 250 Vial of Powerful Blood + Vision Crystal + 100 Charged Cores. Add as a 'gift_of_quickness' component if you want it tracked."
+      "notes": "Gen 1 sword. Gift of Lightning uses 100 Charged Lodestones."
+    },
+    {
+      "collection_key": "the_bifrost",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29180, "quantity": 1, "name": "The Legend (Bifrost Precursor)" },
+        { "kind": "item", "id": 24310, "quantity": 100, "name": "Onyx Lodestone" },
+        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" }
+      ],
+      "notes": "Gen 1 staff. Gift of Rainbows uses Onyx + Charged Lodestones (rainbow elements)."
+    },
+    {
+      "collection_key": "the_dreamer",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29178, "quantity": 1, "name": "The Lover (Dreamer Precursor)" }
+      ],
+      "notes": "Gen 1 shortbow. Gift of Dreams uses Unicorn Horns + Icy Runestones, no traditional lodestones."
+    },
+    {
+      "collection_key": "the_flameseeker_prophecies",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29177, "quantity": 1, "name": "The Chosen (Flameseeker Precursor)" },
+        { "kind": "item", "id": 24320, "quantity": 100, "name": "Glacial Lodestone" }
+      ],
+      "notes": "Gen 1 shield. Gift of Prophecies uses Glacial Lodestones."
+    },
+    {
+      "collection_key": "frenzy",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29179, "quantity": 1, "name": "Rage (Frenzy Precursor)" },
+        { "kind": "item", "id": 24330, "quantity": 100, "name": "Crystal Lodestone" }
+      ],
+      "notes": "Gen 1 underwater spear. Gift of Underworld uses Crystal Lodestones."
+    },
+    {
+      "collection_key": "frostfang",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29166, "quantity": 1, "name": "Tooth of Frostfang (Frostfang Precursor)" },
+        { "kind": "item", "id": 24340, "quantity": 100, "name": "Corrupted Lodestone" },
+        { "kind": "item", "id": 24320, "quantity": 100, "name": "Glacial Lodestone" }
+      ],
+      "notes": "Gen 1 axe. Gift of Ice uses 100 Corrupted + 100 Glacial Lodestones."
     },
     {
       "collection_key": "howler",
-      "components": ["gift_of_fortune", "gift_of_mastery"],
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
       "leaves": [
-        { "kind": "item", "id": 30699, "quantity": 1, "name": "Howl (Howler Precursor)", "notes": "id TBV" }
+        { "kind": "item", "id": 29184, "quantity": 1, "name": "Howl (Howler Precursor)" },
+        { "kind": "item", "id": 24310, "quantity": 100, "name": "Onyx Lodestone" },
+        { "kind": "item", "id": 24320, "quantity": 100, "name": "Glacial Lodestone" }
       ],
-      "notes": "Gen 1 warhorn. One of the cheapest Gen 1s — precursor is craftable. Specific gift uses Onyx + Glacial Lodestones."
+      "notes": "Gen 1 warhorn. One of the cheapest Gen 1s — precursor is craftable. Gift of Howl uses Onyx + Glacial Lodestones."
+    },
+    {
+      "collection_key": "incinerator",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29167, "quantity": 1, "name": "Spark (Incinerator Precursor)" },
+        { "kind": "item", "id": 24315, "quantity": 100, "name": "Molten Lodestone" },
+        { "kind": "item", "id": 24325, "quantity": 100, "name": "Destroyer Lodestone" }
+      ],
+      "notes": "Gen 1 dagger. Gift of Incinerator uses Molten + Destroyer Lodestones."
+    },
+    {
+      "collection_key": "the_juggernaut",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29170, "quantity": 1, "name": "The Colossus (Juggernaut Precursor)" },
+        { "kind": "item", "id": 19684, "quantity": 250, "name": "Mithril Ingot", "notes": "Gift of Quaggan uses 250 Mithril Ingots converted to Mercury" }
+      ],
+      "notes": "Gen 1 hammer. Iconic for its liquid-mercury Norn-form transformation; signature mat is mercury (no public id) — Mithril Ingot is the upstream sink."
+    },
+    {
+      "collection_key": "kamohoalii_kotaki",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29171, "quantity": 1, "name": "Carcharias (Kamohoali'i Kotaki Precursor)" },
+        { "kind": "item", "id": 24340, "quantity": 100, "name": "Corrupted Lodestone" }
+      ],
+      "notes": "Gen 1 underwater harpoon gun. Gift of Sharks uses Corrupted Lodestones."
+    },
+    {
+      "collection_key": "kraitkin",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29183, "quantity": 1, "name": "Venom (Kraitkin Precursor)" },
+        { "kind": "item", "id": 24340, "quantity": 100, "name": "Corrupted Lodestone" }
+      ],
+      "notes": "Gen 1 underwater trident. Gift of the Krait uses Corrupted Lodestones."
+    },
+    {
+      "collection_key": "kudzu",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29172, "quantity": 1, "name": "Leaf of Kudzu (Kudzu Precursor)" },
+        { "kind": "item", "id": 24330, "quantity": 100, "name": "Crystal Lodestone" }
+      ],
+      "notes": "Gen 1 longbow. Gift of Nature uses Crystal Lodestones."
+    },
+    {
+      "collection_key": "meteorlogicus",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29176, "quantity": 1, "name": "Storm (Meteorlogicus Precursor)" }
+      ],
+      "notes": "Gen 1 scepter. Gift of Weather has no lodestones — Hardened Leather + Orichalcum heavy. Already covered by gen1_signature."
+    },
+    {
+      "collection_key": "the_minstrel",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29168, "quantity": 1, "name": "The Bard (Minstrel Precursor)" },
+        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" }
+      ],
+      "notes": "Gen 1 focus. Gift of Music uses Charged Lodestones."
+    },
+    {
+      "collection_key": "the_moot",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29173, "quantity": 1, "name": "The Energizer (Moot Precursor)" }
+      ],
+      "notes": "Gen 1 mace. Gift of Music/Lights uses no lodestones beyond Icy Runestones already in gen1_signature."
+    },
+    {
+      "collection_key": "the_predator",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29175, "quantity": 1, "name": "The Hunter (Predator Precursor)" },
+        { "kind": "item", "id": 24315, "quantity": 100, "name": "Molten Lodestone" }
+      ],
+      "notes": "Gen 1 rifle. Gift of the Hunt uses Molten Lodestones."
+    },
+    {
+      "collection_key": "quip",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29174, "quantity": 1, "name": "Chaos Gun (Quip Precursor)" },
+        { "kind": "item", "id": 24330, "quantity": 100, "name": "Crystal Lodestone" }
+      ],
+      "notes": "Gen 1 pistol. Gift of Joking uses Crystal Lodestones (rainbow confetti theme)."
+    },
+    {
+      "collection_key": "rodgort",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29182, "quantity": 1, "name": "Rodgort's Flame (Rodgort Precursor)" },
+        { "kind": "item", "id": 24315, "quantity": 100, "name": "Molten Lodestone" },
+        { "kind": "item", "id": 24325, "quantity": 100, "name": "Destroyer Lodestone" }
+      ],
+      "notes": "Gen 1 torch. Gift of Rodgort uses 100 Molten + 100 Destroyer Lodestones."
+    },
+    {
+      "collection_key": "sunrise",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29169, "quantity": 1, "name": "Dawn (Sunrise Precursor)" }
+      ],
+      "notes": "Gen 1 greatsword. Gift of Light uses no lodestones — Icy Runestones already in gen1_signature. Combine with Twilight in Mystic Forge to make Eternity (id 30689)."
+    },
+    {
+      "collection_key": "twilight",
+      "components": ["gift_of_fortune", "gift_of_mastery", "gen1_signature"],
+      "leaves": [
+        { "kind": "item", "id": 29185, "quantity": 1, "name": "Dusk (Twilight Precursor)" },
+        { "kind": "item", "id": 24310, "quantity": 100, "name": "Onyx Lodestone" }
+      ],
+      "notes": "Gen 1 greatsword. Gift of Darkness uses 100 Onyx Lodestones."
     },
     {
       "collection_key": "astralaria",
-      "components": ["mystic_tribute", "gift_of_mastery"],
+      "components": ["mystic_tribute", "gift_of_mastery", "vision_crystal"],
       "leaves": [
-        { "kind": "item", "id": 76223, "quantity": 1, "name": "The Lover (Astralaria Precursor)", "notes": "id TBV; account-bound precursor, but the legacy item id still works for owned-count" }
+        { "kind": "item", "id": 71426, "quantity": 1, "name": "The Mechanism (Astralaria Precursor)", "notes": "account-bound precursor, but the item id still works for owned-count" },
+        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" }
       ],
       "notes": "Gen 2 axe. Real recipe also wants Gift of Astralaria + Gift of Maguuma Mastery — not modelled here."
     },
     {
-      "collection_key": "aurora",
-      "components": [],
+      "collection_key": "hope",
+      "components": ["mystic_tribute", "gift_of_mastery", "vision_crystal"],
       "leaves": [
-        { "kind": "currency", "id": 32, "quantity": 200, "name": "Unbound Magic", "notes": "Living World season 3 currency; id TBV" },
-        { "kind": "item", "id": 19925, "quantity": 100, "name": "Glob of Ectoplasm", "notes": "Used across multiple Aurora steps — placeholder aggregate" },
-        { "kind": "item", "id": 19976, "quantity": 30, "name": "Mystic Coin", "notes": "Used across multiple Aurora steps — placeholder aggregate" }
+        { "kind": "item", "id": 76399, "quantity": 1, "name": "Prototype (HOPE Precursor)", "notes": "account-bound precursor" },
+        { "kind": "item", "id": 24305, "quantity": 100, "name": "Charged Lodestone" }
       ],
-      "notes": "Trinket made purely through the collection achievement (no Mystic Forge final step). Real progress lives in the collection bits — the leaves listed here are a low-fidelity approximation of total spend across the 24 collection steps."
+      "notes": "Gen 2 focus. Real recipe also wants Gift of HOPE + Gift of Maguuma Mastery — not modelled here."
     },
     {
-      "collection_key": "ad_infinitum_1",
+      "collection_key": "nevermore",
+      "components": ["mystic_tribute", "gift_of_mastery", "vision_crystal"],
+      "leaves": [
+        { "kind": "item", "id": 74068, "quantity": 1, "name": "The Raven Staff (Nevermore Precursor)", "notes": "account-bound precursor" },
+        { "kind": "item", "id": 24310, "quantity": 100, "name": "Onyx Lodestone" }
+      ],
+      "notes": "Gen 2 staff. Real recipe also wants Gift of Nevermore + Gift of Maguuma Mastery — not modelled here."
+    },
+    {
+      "collection_key": "chuka_and_champawat",
+      "components": ["mystic_tribute", "gift_of_mastery", "vision_crystal"],
+      "leaves": [
+        { "kind": "item", "id": 78425, "quantity": 1, "name": "Tigris (Chuka and Champawat Precursor)", "notes": "account-bound precursor" }
+      ],
+      "notes": "Gen 2 shortbow. Real recipe also wants Gift of Chuka and Champawat + Gift of Maguuma Mastery — not modelled here."
+    },
+    {
+      "collection_key": "klobjarne_geirr",
+      "components": ["mystic_tribute"],
+      "leaves": [
+        { "kind": "item", "id": 103973, "quantity": 1, "name": "Nyr Hrammr (Klobjarne Geirr Precursor)", "notes": "account-bound precursor from Janthir Wilds collection" },
+        { "kind": "item", "id": 19721, "quantity": 250, "name": "Glob of Ectoplasm", "notes": "additional ecto spend in Gift of Janthir Wilds — placeholder" }
+      ],
+      "notes": "Janthir Wilds legendary spear. Real recipe wants Gift of Janthir Wilds + Gift of the Homesteader + Gift of Klobjarne Geirr — those use map-specific currencies (Lowland Pine, Honey Flower) not modelled here. Progress mainly lives in the collection achievement."
+    },
+    {
+      "collection_key": "aurora",
+      "components": ["mystic_tribute"],
+      "leaves": [
+        { "kind": "currency", "id": 32, "quantity": 1000, "name": "Unbound Magic", "notes": "approximate aggregate across all 6 LWS3 map currencies" },
+        { "kind": "item", "id": 19925, "quantity": 250, "name": "Obsidian Shard" }
+      ],
+      "notes": "LWS3 trinket made purely through the collection achievement (no Mystic Forge final step). Real progress lives in the collection bits — the leaves listed here are a low-fidelity approximation of total spend across the 24 collection steps."
+    },
+    {
+      "collection_key": "vision",
+      "components": ["mystic_tribute"],
+      "leaves": [
+        { "kind": "currency", "id": 45, "quantity": 1000, "name": "Volatile Magic", "notes": "approximate aggregate across LWS4 maps" },
+        { "kind": "item", "id": 19925, "quantity": 250, "name": "Obsidian Shard" }
+      ],
+      "notes": "LWS4 trinket built through the Vision I+II collection chain. Real progress lives in the collection bits — leaves here are a low-fidelity approximation."
+    },
+    {
+      "collection_key": "coalescence",
+      "components": ["mystic_tribute"],
+      "leaves": [
+        { "kind": "currency", "id": 70, "quantity": 150, "name": "Legendary Insight", "notes": "150 LI required across the collection" },
+        { "kind": "item", "id": 19925, "quantity": 250, "name": "Obsidian Shard" }
+      ],
+      "notes": "PoF + raid trinket. Requires Funerary Incense, Balls of Dark Energy, 150 Legendary Insights — leaves here are a low-fidelity approximation. Progress mainly lives in the collection achievement."
+    },
+    {
+      "collection_key": "ad_infinitum",
       "components": [],
       "leaves": [
-        { "kind": "currency", "id": 7, "quantity": 1500, "name": "Fractal Relic", "notes": "id TBV" },
-        { "kind": "currency", "id": 24, "quantity": 30, "name": "Pristine Fractal Relic", "notes": "id TBV" },
-        { "kind": "item", "id": 19925, "quantity": 50, "name": "Glob of Ectoplasm" }
+        { "kind": "currency", "id": 7, "quantity": 1500, "name": "Fractal Relic" },
+        { "kind": "currency", "id": 24, "quantity": 30, "name": "Pristine Fractal Relic" },
+        { "kind": "item", "id": 73248, "quantity": 100, "name": "Stabilizing Matrix" },
+        { "kind": "item", "id": 19721, "quantity": 50, "name": "Glob of Ectoplasm" },
+        { "kind": "item", "id": 49424, "quantity": 1, "name": "+1 Agony Infusion", "notes": "many higher-tier agony infusions also required — placeholder" }
       ],
-      "notes": "Ad Infinitum Tier 1 (Fractal back). Most cost lives in Fractal Relics, ascended materials, and the collection achievement itself. Add stabilising matrices / fractal weapon drops if you want finer-grained tracking."
+      "notes": "Fractal back-piece. Tier 1 (Finite Result) → Tier 4 (Ad Infinitum). Most cost lives in Fractal Relics, ascended materials, and the collection achievements themselves."
+    },
+    {
+      "collection_key": "envoy_armor",
+      "components": [],
+      "leaves": [
+        { "kind": "currency", "id": 70, "quantity": 300, "name": "Legendary Insight", "notes": "50 LI per piece × 6 pieces" },
+        { "kind": "item", "id": 19675, "quantity": 90, "name": "Mystic Clover", "notes": "15 per piece × 6 pieces" },
+        { "kind": "item", "id": 19976, "quantity": 288, "name": "Mystic Coin", "notes": "~48 per piece × 6 pieces" },
+        { "kind": "item", "id": 19721, "quantity": 288, "name": "Glob of Ectoplasm", "notes": "~48 per piece × 6 pieces" },
+        { "kind": "currency", "id": 29, "quantity": 300, "name": "Provisioner Token", "notes": "50 per piece × 6 pieces" }
+      ],
+      "notes": "HoT raid legendary armor (6-piece set). Time-gated by raid LI drops. Real progress mostly lives in the three collection achievements (Refined Envoy I/II/III) — leaves here are full-set aggregates."
+    },
+    {
+      "collection_key": "astral_armor",
+      "components": [],
+      "leaves": [
+        { "kind": "currency", "id": 72, "quantity": 600, "name": "Static Charge", "notes": "approximate across the 7 collection steps" },
+        { "kind": "currency", "id": 73, "quantity": 600, "name": "Pinch of Stardust", "notes": "approximate" },
+        { "kind": "currency", "id": 75, "quantity": 200, "name": "Calcified Gasp", "notes": "approximate" },
+        { "kind": "item", "id": 19675, "quantity": 54, "name": "Mystic Clover", "notes": "~9 per piece × 6 pieces" },
+        { "kind": "item", "id": 19976, "quantity": 174, "name": "Mystic Coin", "notes": "~29 per piece × 6 pieces" },
+        { "kind": "currency", "id": 29, "quantity": 300, "name": "Provisioner Token", "notes": "50 per piece × 6 pieces" }
+      ],
+      "notes": "SotO Tier 1 legendary armor. 7-step collection chain unlocks the piece. Progress mainly lives in the collection achievement — leaves here are full-set aggregates."
+    },
+    {
+      "collection_key": "obsidian_armor",
+      "components": [],
+      "leaves": [
+        { "kind": "currency", "id": 78, "quantity": 18000, "name": "Fine Rift Essence", "notes": "3000 per piece × 6 pieces" },
+        { "kind": "currency", "id": 80, "quantity": 7200, "name": "Masterwork Rift Essence", "notes": "1200 per piece × 6 pieces" },
+        { "kind": "currency", "id": 79, "quantity": 3600, "name": "Rare Rift Essence", "notes": "600 per piece × 6 pieces" },
+        { "kind": "item", "id": 19675, "quantity": 54, "name": "Mystic Clover", "notes": "9 per piece × 6 pieces" },
+        { "kind": "currency", "id": 29, "quantity": 300, "name": "Provisioner Token", "notes": "50 per piece × 6 pieces" },
+        { "kind": "item", "id": 19925, "quantity": 300, "name": "Obsidian Shard", "notes": "50 per piece × 6 pieces" }
+      ],
+      "notes": "SotO Tier 2 legendary armor. Built by upgrading Astral pieces. Progress mainly lives in the 3 collection achievements — leaves here are full-set aggregates."
     }
   ]
 }
