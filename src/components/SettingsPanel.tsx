@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { relaunch } from "@tauri-apps/plugin-process";
 
 import { api } from "../lib/tauri";
 import { useSettingsStore } from "../store/settings";
@@ -403,6 +404,29 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             Version: {appVersion}
           </p>
         )}
+      </div>
+
+      <div className="border-t border-white/10 pt-3 flex flex-col gap-2">
+        <h2 className="font-semibold">Window layout</h2>
+        <p className="text-[10px] opacity-70">
+          If a window ends up off-screen, maximized, or otherwise stuck,
+          this clears the saved layout and relaunches with the defaults
+          from <code>tauri.conf.json</code> (centered, 380×600).
+        </p>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await api.resetWindowLayout();
+              await relaunch();
+            } catch (e) {
+              console.warn("reset layout failed:", e);
+            }
+          }}
+          className="self-start px-2 py-1 text-[10px] bg-white/10 hover:bg-white/20 rounded"
+        >
+          🔄 Reset window layout &amp; restart
+        </button>
       </div>
 
       <div className="border-t border-red-400/30 pt-3 flex flex-col gap-2">

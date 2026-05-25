@@ -271,6 +271,29 @@ pub fn cmd_app_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
 
+/// Wipe the persisted window-state file so the next launch falls back to the
+/// defaults declared in `tauri.conf.json` (centered, default sizes). Useful
+/// when a window ends up off-screen / maximized / otherwise stuck — the
+/// plugin has no programmatic 'reset' API of its own. Caller is expected to
+/// relaunch the app afterwards via the process plugin.
+#[tauri::command]
+pub fn cmd_reset_window_layout() -> Result<()> {
+    let base = std::env::var("APPDATA")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from("."));
+    let app_dir = base.join("com.tripleseptconsulting.gw2overlay");
+    // tauri-plugin-window-state v2 writes to `.window-state` (no extension).
+    // Be defensive against future renames + the legacy `.json` variant.
+    for name in [".window-state", ".window-state.json", "window-state.json"] {
+        let p = app_dir.join(name);
+        if p.exists() {
+            std::fs::remove_file(&p)
+                .map_err(|e| AppError::Other(format!("remove {name}: {e}")))?;
+        }
+    }
+    Ok(())
+}
+
 /// Wipe every data table (achievements, items, todos, wallet, etc.) while
 /// preserving the API key + user preferences. Re-seeds the curated catalogs
 /// (legendary_collections, boss links) so the Catalog tab isn't empty after

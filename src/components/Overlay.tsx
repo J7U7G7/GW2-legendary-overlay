@@ -65,6 +65,11 @@ export function Overlay() {
   useCrossWindowSync();
 
   const hasUsableKey = apiKeyStatus !== null && apiKeyStatus.permissions_ok;
+  // First-launch flash guard: apiKeyStatus starts at null (initial) AND the
+  // check is in flight. We must NOT show ApiKeySetup during this ~1s window
+  // because the user already had a valid key stored — they'd see the setup
+  // screen briefly, panic, re-enter, and clobber their own stored key.
+  const isCheckingInitial = apiKeyStatus === null && status === "checking";
 
   return (
     <main
@@ -90,6 +95,11 @@ export function Overlay() {
 
       {collapsed ? null : settingsOpen ? (
         <SettingsPanel onClose={() => setSettingsOpen(false)} />
+      ) : isCheckingInitial ? (
+        <div className="flex-1 flex items-center justify-center text-xs opacity-50">
+          <span className="inline-block animate-spin mr-2">⟳</span>
+          Loading…
+        </div>
       ) : !hasUsableKey ? (
         <ApiKeySetup />
       ) : (
