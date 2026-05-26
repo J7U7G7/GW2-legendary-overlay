@@ -14,12 +14,10 @@ function searchWikiUrl(query: string) {
   return `https://wiki.guildwars2.com/wiki/Special:Search?search=${encodeURIComponent(query)}&go=Go`;
 }
 
-/** Pick the best wiki URL for a bit: prefer direct EN page → fall back to
- * EN-wiki search by FR name (better than nothing) → finally search by raw
- * text. Never link to a French wiki or to a useless `kind:id` query. */
+/** Pick the best wiki URL for a bit. `resolved_name` is now always EN since
+ * v0.1.11 — the v0.1.10 `resolved_name_en` parallel field is gone. */
 function wikiUrlForBit(bit: PinnedBit, fallbackText: string): string | null {
-  if (bit.resolved_name_en) return directWikiUrl(bit.resolved_name_en);
-  if (bit.resolved_name) return searchWikiUrl(bit.resolved_name);
+  if (bit.resolved_name) return directWikiUrl(bit.resolved_name);
   if (fallbackText.length > 0) return searchWikiUrl(fallbackText);
   return null;
 }
