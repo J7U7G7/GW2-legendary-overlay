@@ -178,21 +178,8 @@ pub async fn get_items_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<ItemDetai
         return Ok(vec![]);
     }
     let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
-    // lang=fr because the user plays the French client and expects to search
-    // 'bouclier' / 'élevé' / etc. To make this configurable, plumb a setting
-    // through and parameterise here.
-    c.get_json(&format!("/v2/items?ids={ids_csv}&lang=fr")).await
-}
-
-/// Same batch as `get_items_batch` but with `lang=en`. Used purely to
-/// populate `name_en` so wiki links can deep-link to the canonical English
-/// page (the FR name doesn't resolve on wiki.guildwars2.com).
-#[allow(dead_code)]
-pub async fn get_items_batch_en(c: &ApiClient, ids: &[u32]) -> Result<Vec<ItemDetail>> {
-    if ids.is_empty() {
-        return Ok(vec![]);
-    }
-    let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+    // English everywhere — the overlay matches the wider GW2 ecosystem (wiki,
+    // snowcrows, ArcDPS) rather than the user's in-game client language.
     c.get_json(&format!("/v2/items?ids={ids_csv}&lang=en")).await
 }
 
@@ -216,16 +203,7 @@ pub async fn get_skins_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<SkinDetai
         return Ok(vec![]);
     }
     let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
-    // FR for consistency with /v2/items.
-    c.get_json(&format!("/v2/skins?ids={ids_csv}&lang=fr")).await
-}
-
-#[allow(dead_code)]
-pub async fn get_skins_batch_en(c: &ApiClient, ids: &[u32]) -> Result<Vec<SkinDetail>> {
-    if ids.is_empty() {
-        return Ok(vec![]);
-    }
-    let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
+    // EN to match the rest of the overlay.
     c.get_json(&format!("/v2/skins?ids={ids_csv}&lang=en")).await
 }
 
@@ -313,7 +291,7 @@ pub async fn get_currencies_batch(c: &ApiClient, ids: &[u32]) -> Result<Vec<Curr
         return Ok(vec![]);
     }
     let ids_csv = ids.iter().map(u32::to_string).collect::<Vec<_>>().join(",");
-    c.get_json(&format!("/v2/currencies?ids={ids_csv}&lang=fr")).await
+    c.get_json(&format!("/v2/currencies?ids={ids_csv}&lang=en")).await
 }
 
 #[allow(dead_code)]

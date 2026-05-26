@@ -971,11 +971,6 @@ pub struct PinnedBitView {
     pub index: u32,
     pub kind: String,
     pub ref_id: Option<i64>,
-    /// English name of the resolved Item/Skin — used by the FE to build
-    /// a wiki link that actually deep-links to the canonical page. None
-    /// when the bit is unresolved or its cached row predates the bilingual
-    /// migration (v9).
-    pub resolved_name_en: Option<String>,
     pub text: Option<String>,
     pub done: bool,
     /// Resolved name for Item-typed bits (looked up in items_cache).
@@ -1788,32 +1783,17 @@ fn parse_bits(
                 .and_then(|v| v.as_str())
                 .filter(|s| !s.is_empty())
                 .map(|s| s.to_string());
-            let (resolved_name, resolved_name_en, resolved_description, resolved_rarity) =
-                match kind.as_str() {
-                    "Item" => ref_id
-                        .and_then(|id| item_cache.get(&(id as u32)))
-                        .map(|it| {
-                            (
-                                Some(it.name.clone()),
-                                it.name_en.clone(),
-                                it.description.clone(),
-                                it.rarity.clone(),
-                            )
-                        })
-                        .unwrap_or((None, None, None, None)),
-                    "Skin" => ref_id
-                        .and_then(|id| skin_cache.get(&(id as u32)))
-                        .map(|sk| {
-                            (
-                                Some(sk.name.clone()),
-                                sk.name_en.clone(),
-                                sk.description.clone(),
-                                sk.rarity.clone(),
-                            )
-                        })
-                        .unwrap_or((None, None, None, None)),
-                    _ => (None, None, None, None),
-                };
+            let (resolved_name, resolved_description, resolved_rarity) = match kind.as_str() {
+                "Item" => ref_id
+                    .and_then(|id| item_cache.get(&(id as u32)))
+                    .map(|it| (Some(it.name.clone()), it.description.clone(), it.rarity.clone()))
+                    .unwrap_or((None, None, None)),
+                "Skin" => ref_id
+                    .and_then(|id| skin_cache.get(&(id as u32)))
+                    .map(|sk| (Some(sk.name.clone()), sk.description.clone(), sk.rarity.clone()))
+                    .unwrap_or((None, None, None)),
+                _ => (None, None, None),
+            };
             PinnedBitView {
                 index: idx as u32,
                 kind,
@@ -1821,7 +1801,6 @@ fn parse_bits(
                 text,
                 done: done_set.contains(&(idx as u32)),
                 resolved_name,
-                resolved_name_en,
                 resolved_description,
                 resolved_rarity,
             }
