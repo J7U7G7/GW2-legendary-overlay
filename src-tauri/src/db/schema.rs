@@ -23,6 +23,10 @@ const MIGRATIONS: &[&str] = &[
     // v9: EN names for items + skins so wiki links can deep-link to the
     //     canonical English page instead of broken FR-name searches
     BILINGUAL_NAMES_SCHEMA,
+    // v10: switch the whole UI to English. Wipe the four tables that held
+    // FR-localized data so the next sync re-fetches in EN, and drop the
+    // now-redundant `name_en` columns from v9.
+    FULL_ENGLISH_SCHEMA,
 ];
 
 const INITIAL_SCHEMA: &str = r#"
@@ -180,6 +184,15 @@ const SKINS_CACHE_SCHEMA: &str = r#"
 const BILINGUAL_NAMES_SCHEMA: &str = r#"
     ALTER TABLE items_cache ADD COLUMN name_en TEXT;
     ALTER TABLE skins_cache ADD COLUMN name_en TEXT;
+"#;
+
+const FULL_ENGLISH_SCHEMA: &str = r#"
+    DELETE FROM items_cache;
+    DELETE FROM skins_cache;
+    DELETE FROM achievements;
+    DELETE FROM wizardsvault;
+    ALTER TABLE items_cache DROP COLUMN name_en;
+    ALTER TABLE skins_cache DROP COLUMN name_en;
 "#;
 
 const WALLET_SCHEMA: &str = r#"

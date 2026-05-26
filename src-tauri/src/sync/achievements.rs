@@ -100,6 +100,15 @@ pub fn last_full_sync(db: &Db) -> Result<Option<String>> {
 
 #[allow(dead_code)] // used by scheduler in step 4d
 pub fn is_stale(db: &Db, max_age_days: i64) -> Result<bool> {
+    // Empty cache → always stale. Without this the v0.1.11 migration that
+    // wipes `achievements` would never trigger a re-fetch because the
+    // `last_full_sync` timestamp in `settings` survives the wipe.
+    let count: i64 = db.with_conn(|c| {
+        Ok(c.query_row("SELECT COUNT(*) FROM achievements", [], |r| r.get(0))?)
+    })?;
+    if count == 0 {
+        return Ok(true);
+    }
     let Some(ts) = db.get_setting(LAST_FULL_SYNC_KEY)? else {
         return Ok(true);
     };
@@ -110,5 +119,21 @@ pub fn is_stale(db: &Db, max_age_days: i64) -> Result<bool> {
             warn!(error = %e, "invalid last_full_sync timestamp, treating as stale");
             Ok(true)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::repository::Db;
+    use chrono::Utc;
+
+    #[test]
+    fn is_stale_returns_true_when_table_empty_even_if_timestamp_fresh() {
+        let db = Db::open_in_memory().unwrap();
+        // Pretend a sync just happened (timestamp fresh).
+        db.set_setting(LAST_FULL_SYNC_KEY, &Utc::now().to_rfc3339()).unwrap();
+        // No rows in achievements → must be stale anyway.
+        assert!(is_stale(&db, 7).unwrap());
     }
 }
