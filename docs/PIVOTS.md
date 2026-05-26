@@ -1,8 +1,8 @@
 # Pivots history
 
-The project shipped four substantial product/architecture pivots
-during its first iteration cycle. Documenting them here so future
-contributors don't have to re-derive the *why* from the git log.
+The project shipped five substantial product/architecture pivots.
+Documenting them here so future contributors don't have to re-derive
+the *why* from the git log.
 
 ## Pivot 1: Wizard's Vault first → Legendaries first (commit `6d17c6b`)
 
@@ -90,6 +90,39 @@ their own movable / resizable strip.
   responses; only the periodic sync engine treats `Unauthorized` as
   terminal.
 
+## Pivot 5: FR display → full English (commit `2b004f5`, v0.1.11)
+
+**Before:** Items / skins / achievement bits / WV objectives were
+fetched + cached + displayed in French (`?lang=fr`), since the user
+plays the FR client. v0.1.10 introduced a parallel `name_en` column +
+dual-fetch pipeline to keep the FR display while making wiki links
+target the canonical English pages.
+
+**Why the pivot:** The bilingual machinery was working but the
+mental-translation tax was real — read "Lingot de mithril" in the
+UI, click → land on `wiki/Mithril_Ingot`. Plus the achievement-level
+"Open on wiki ↗" link couldn't deep-link (still searched by FR
+name) and that gap accumulated frustration. The user explicitly
+chose **all-EN** during a brainstorming round, accepting the trade-
+off that searching items by FR names (`"bouclier élevé"`) would
+no longer work.
+
+**After:** Schema v10 wiped the four FR-cached tables
+(items_cache, skins_cache, achievements, wizardsvault) and dropped
+the `name_en` columns. Endpoints now fetch `lang=en` directly. The
+dual-fetch `tokio::join!` + `name_en` machinery is fully removed.
+Bulk re-sync runs once (~50s) on first launch of v0.1.11. Wiki links
+now deep-link via `wiki/<EN_name>` directly. Side benefit: the
+achievement-level link is no longer broken since `item.name` is now
+EN and the existing search URL produces useful results.
+
+**Process note:** This was the first feature shipped via the
+superpowers brainstorming → spec → plan → subagent-driven-execution
+workflow. The spec + plan documents live at
+`docs/superpowers/specs/2026-05-26-full-english-display-design.md`
+and `docs/superpowers/plans/2026-05-26-full-english-display.md`.
+Worth re-using for future ≥ medium features.
+
 ---
 
 ## Smaller bugs / findings worth knowing
@@ -169,3 +202,70 @@ re-derives them:
   stays as harmless empty schema. Audit grep target: `daily_assignments`
   appears only inside its own `CREATE TABLE` string + the
   `fresh_migration_creates_all_tables` test list.
+
+- **Tauri 2 multi-window boot race** (`fix(api) 8d7af81`, v0.1.9) —
+  with multiple windows declared in `tauri.conf.json`, the WebView2
+  webviews boot in parallel with the setup hook. The main window's
+  React `useEffect` can fire `cmd_check_api_key` BEFORE
+  `app.manage(AppState)` has run, getting `"state not managed for
+  field state on command cmd_check_api_key"`. The error was caught
+  by the FE store and persisted as "no API key" → user saw the
+  setup screen repeatedly despite the key being in DB. Fix: every
+  Tauri invoke goes through a `lib/tauri.ts::invoke` wrapper that
+  retries up to 6 times with exponential backoff (80 ms × attempt)
+  on the specific `"state not managed"` error string. Other errors
+  propagate immediately.
+
+- **Tauri 2 auto-updater needs `bundle.createUpdaterArtifacts: true`**
+  — configuring `plugins.updater.pubkey` is NOT sufficient to make
+  `tauri build` emit `.sig` files alongside the installers.
+  Documented in passing under "Migrating from v1" but missing from
+  the updater plugin page. Without this, the .exe + .msi land in
+  the bundle dir but no signatures, and the manifest-gen step in
+  the release workflow fails with "NSIS installer or signature not
+  found".
+
+- **GitHub Release asset URLs replace spaces with dots**
+  (`fix(release) 1e85091`) — `tauri build` produces
+  `"GW2 Legendary Overlay_0.1.X_x64-setup.exe"` but the GitHub
+  download URL uses `"GW2.Legendary.Overlay_0.1.X_x64-setup.exe"`.
+  The `latest.json` manifest URL must mirror that transformation or
+  the in-app updater hits a 404 on install.
+
+- **`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` cannot be empty on GitHub
+  Secrets** — the UI rejects an empty value. Workaround: hardcode
+  the env var to `""` in `release.yml` and ignore whatever the
+  secret contains. If the signing key was generated with
+  `--password ""` (unencrypted), minisign IS strict about the
+  password match → passing any non-empty value would fail signing
+  silently.
+
+- **NSIS `installMode: "passive"`** — required for the in-app
+  auto-updater to work without UAC re-prompts per update. The
+  default `wizard` mode interrupts the user mid-flow.
+
+- **`load_api_key` is the load-bearing function** — every diagnostic
+  we added for the "API key not persisting" bug (which turned out to
+  be Pivot 5's boot race, not DPAPI) flows through this function.
+  Per-step logging lives there: "no row in settings" / "base64
+  decode failed" / "DPAPI unprotect failed" / "loaded successfully".
+  Keep those logs intact even if you refactor — they're how the next
+  bug gets diagnosed without an in-person debugging session.
+
+- **FE → tracing log bridge** (`cmd_log_event`) — React can write to
+  the same rolling file log via this command. Used in `useHotkeys`,
+  `store.checkApiKey`, `Overlay.render`. Critical for diagnosing
+  production-only bugs that `console.log` can't surface (devtools
+  are awkward in a WebView2 release build).
+
+- **`is_stale` must check `count(*) = 0`** (commit `35267227`,
+  Pivot 5) — the `last_full_sync` timestamp lives in the `settings`
+  table which survives a data-table wipe. Without the count check,
+  a Schema v10–style wipe would leave the bulk re-fetch dormant
+  forever. Apply the same pattern to any future similar staleness
+  check.
+
+- **Tauri-bundler bundle dir layout** — installers land at
+  `src-tauri/target/release/bundle/{msi,nsis}/`. The `latest.json`
+  manifest expects to be uploaded alongside, not in those subdirs.
+  Workflow generates it in the repo root.
