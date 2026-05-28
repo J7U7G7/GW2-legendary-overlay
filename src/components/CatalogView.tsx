@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppStore } from "../store/app";
 import { wikiUrl } from "../lib/format";
 import { api } from "../lib/tauri";
-import type { LegendaryCollection, LegendaryProgress, MissingLeaf } from "../types/gw2";
+import type { LegendaryCollection, LeafProgress, LegendaryProgress, ProgressGroup } from "../types/gw2";
 
 const KIND_LABEL: Record<string, string> = {
   weapon: "Weapon",
@@ -23,7 +23,7 @@ function KindBadge({ kind }: { kind: string }) {
   );
 }
 
-function formatLeafQty(leaf: MissingLeaf): string {
+function formatLeafQty(leaf: LeafProgress): string {
   if (leaf.kind === "currency" && leaf.id === 1) {
     // Coin in copper. Format as gold/silver for missing > a gold's worth.
     const abs = Math.abs(leaf.missing);
@@ -49,26 +49,29 @@ function ProgressBar({ ratio }: { ratio: number }) {
   );
 }
 
-function RecipeProgressBlock({ progress }: { progress: LegendaryProgress }) {
-  const pct = Math.round(progress.ratio * 100);
+function GroupSection({ group }: { group: ProgressGroup }) {
+  const complete = group.leaves_complete === group.leaves_total;
+  const [open, setOpen] = useState(!complete);
+  const pct = Math.round(group.ratio * 100);
+  const missing = group.leaves.filter((l) => !l.complete);
   return (
-    <div className="border-t border-white/5 px-3 py-2 bg-white/[0.03]">
-      <div className="flex items-center justify-between text-[10px] mb-1.5">
-        <span className="opacity-70 font-semibold">
-          📦 Recipe: {pct}% complete
+    <div className="mt-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center justify-between w-full text-left text-[10px] opacity-80 hover:opacity-100"
+      >
+        <span className="font-semibold truncate">
+          {complete ? "✓ " : open ? "▾ " : "▸ "}
+          {group.name}
         </span>
-        <span className="opacity-60 font-mono">
-          {progress.leaves_complete}/{progress.leaves_total} leaves
+        <span className="font-mono opacity-60 shrink-0 ml-2">
+          {pct}% · {group.leaves_complete}/{group.leaves_total}
         </span>
-      </div>
-      <ProgressBar ratio={progress.ratio} />
-      {progress.top_missing.length === 0 ? (
-        <p className="text-[10px] text-[var(--accent-color)] italic mt-1.5">
-          All tracked leaves complete. Remaining work is in achievement steps.
-        </p>
-      ) : (
-        <ul className="mt-1.5 space-y-0.5">
-          {progress.top_missing.map((leaf, i) => (
+      </button>
+      {open && !complete && (
+        <ul className="mt-1 ml-2 space-y-0.5">
+          {missing.map((leaf, i) => (
             <li
               key={`${leaf.kind}:${leaf.id}:${i}`}
               className="text-[10px] flex items-center justify-between gap-2"
@@ -87,6 +90,29 @@ function RecipeProgressBlock({ progress }: { progress: LegendaryProgress }) {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function RecipeProgressBlock({ progress }: { progress: LegendaryProgress }) {
+  const pct = Math.round(progress.ratio * 100);
+  const allComplete = progress.leaves_complete === progress.leaves_total;
+  return (
+    <div className="border-t border-white/5 px-3 py-2 bg-white/[0.03]">
+      <div className="flex items-center justify-between text-[10px] mb-1.5">
+        <span className="opacity-70 font-semibold">📦 Recipe: {pct}% complete</span>
+        <span className="opacity-60 font-mono">
+          {progress.leaves_complete}/{progress.leaves_total} leaves
+        </span>
+      </div>
+      <ProgressBar ratio={progress.ratio} />
+      {allComplete ? (
+        <p className="text-[10px] text-[var(--accent-color)] italic mt-1.5">
+          All tracked leaves complete. Remaining work is in achievement steps.
+        </p>
+      ) : (
+        progress.groups.map((g) => <GroupSection key={g.name} group={g} />)
       )}
     </div>
   );
