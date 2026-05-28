@@ -33,6 +33,9 @@ use crate::error::Result;
 
 const EMBEDDED_RECIPES: &str = include_str!("../data/legendary_recipes.json");
 
+/// Fallback group name for direct leaves that carry no explicit `group` label.
+const DIRECT_FALLBACK_GROUP: &str = "Specific";
+
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum LeafKind {
@@ -154,6 +157,12 @@ pub struct ProgressGroup {
     pub leaves: Vec<LeafProgress>,
 }
 
+/// Per-legendary progress summary returned to the frontend.
+///
+/// `total_needed`, `total_owned`, `leaves_total`, and `leaves_complete` are
+/// computed from the **deduplicated** aggregate: a leaf shared across multiple
+/// components counts once, so these header totals may differ from
+/// `sum(groups[].total_needed)` when an item appears in more than one group.
 #[derive(Debug, Serialize, Clone)]
 pub struct LegendaryProgress {
     pub collection_key: String,
@@ -194,7 +203,7 @@ pub fn compute_progress(
     }
     let direct_start = grouped.len();
     for leaf in &recipe.leaves {
-        let label = leaf.group.clone().unwrap_or_else(|| "Specific".to_string());
+        let label = leaf.group.clone().unwrap_or_else(|| DIRECT_FALLBACK_GROUP.to_string());
         match grouped[direct_start..].iter_mut().find(|(n, _)| *n == label) {
             Some((_, v)) => v.push(leaf.clone()),
             None => grouped.push((label, vec![leaf.clone()])),
