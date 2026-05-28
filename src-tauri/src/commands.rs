@@ -368,7 +368,7 @@ pub async fn cmd_legendary_progress(
         .legendaries
         .iter()
         .map(|rec| {
-            crate::legendary::compute_progress(&catalog, rec, &owned_items, &owned_currencies, 5)
+            crate::legendary::compute_progress(&catalog, rec, &owned_items, &owned_currencies)
         })
         .collect();
 

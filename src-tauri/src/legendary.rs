@@ -50,6 +50,11 @@ pub struct RecipeLeaf {
     pub name: String,
     #[serde(default)]
     pub notes: Option<String>,
+    /// Optional display group for direct leaves. Component leaves are grouped
+    /// by the component name and ignore this. Unlabelled direct leaves fall
+    /// into the `"Specific"` bucket. See spec 2026-05-28-legendary-tier3.
+    #[serde(default)]
+    pub group: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -126,13 +131,27 @@ pub struct AggregateLeaf {
 }
 
 #[derive(Debug, Serialize, Clone)]
-pub struct MissingLeaf {
+pub struct LeafProgress {
     pub kind: LeafKind,
     pub id: u32,
     pub name: String,
     pub needed: i64,
+    /// Owned quantity attributed to *this* group (greedy allocation).
     pub owned: i64,
     pub missing: i64,
+    pub complete: bool,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ProgressGroup {
+    pub name: String,
+    pub total_needed: i64,
+    pub total_owned: i64,
+    pub ratio: f64,
+    pub leaves_total: usize,
+    pub leaves_complete: usize,
+    /// Sorted largest-missing first; complete leaves last.
+    pub leaves: Vec<LeafProgress>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -143,54 +162,107 @@ pub struct LegendaryProgress {
     pub ratio: f64,
     pub leaves_total: usize,
     pub leaves_complete: usize,
-    pub top_missing: Vec<MissingLeaf>,
+    pub groups: Vec<ProgressGroup>,
 }
 
-/// Compute progress for one legendary against the user's owned items +
-/// currencies. `top_n` caps the size of the returned `top_missing` list.
+/// Compute grouped progress for one legendary against the user's owned items +
+/// currencies. Returns one `ProgressGroup` per shared component (in
+/// `recipe.components` order), then one per direct-leaf `group` label (first-
+/// seen order), with unlabelled direct leaves in a trailing `"Specific"` group.
+/// Owned quantity is allocated greedily across groups in order, so per-group
+/// totals reconcile exactly with the deduplicated top-level header totals.
 pub fn compute_progress(
     catalog: &RecipeCatalog,
     recipe: &LegendaryRecipe,
     owned_items: &HashMap<u32, i64>,
     owned_currencies: &HashMap<u32, i64>,
-    top_n: usize,
 ) -> LegendaryProgress {
-    let needs = aggregate_needs(catalog, recipe);
+    let owned_of = |kind: LeafKind, id: u32| -> i64 {
+        match kind {
+            LeafKind::Item => owned_items.get(&id).copied().unwrap_or(0),
+            LeafKind::Currency => owned_currencies.get(&id).copied().unwrap_or(0),
+        }
+    };
 
-    let mut total_needed: i64 = 0;
-    let mut total_owned_capped: i64 = 0;
-    let mut leaves_complete = 0usize;
-    let mut missing_list: Vec<MissingLeaf> = Vec::new();
-
-    for leaf in needs.values() {
-        let owned = match leaf.kind {
-            LeafKind::Item => owned_items.get(&leaf.id).copied().unwrap_or(0),
-            LeafKind::Currency => owned_currencies.get(&leaf.id).copied().unwrap_or(0),
-        };
-        let owned_capped = owned.min(leaf.needed);
-        total_needed += leaf.needed;
-        total_owned_capped += owned_capped;
-        let missing = (leaf.needed - owned).max(0);
-        if missing == 0 {
-            leaves_complete += 1;
-        } else {
-            missing_list.push(MissingLeaf {
-                kind: leaf.kind,
-                id: leaf.id,
-                name: leaf.name.clone(),
-                needed: leaf.needed,
-                owned,
-                missing,
-            });
+    // 1. Ordered (group_name, leaves): components first, then direct leaves
+    //    bucketed by `group` label in first-seen order ("Specific" fallback).
+    let mut grouped: Vec<(String, Vec<RecipeLeaf>)> = Vec::new();
+    for component_key in &recipe.components {
+        if let Some(component) = catalog.components.get(component_key) {
+            grouped.push((component.name.clone(), component.leaves.clone()));
+        }
+    }
+    let direct_start = grouped.len();
+    for leaf in &recipe.leaves {
+        let label = leaf.group.clone().unwrap_or_else(|| "Specific".to_string());
+        match grouped[direct_start..].iter_mut().find(|(n, _)| *n == label) {
+            Some((_, v)) => v.push(leaf.clone()),
+            None => grouped.push((label, vec![leaf.clone()])),
         }
     }
 
-    // Largest missing first — "where am I most blocked".
-    missing_list.sort_by_key(|l| std::cmp::Reverse(l.missing));
-    missing_list.truncate(top_n);
+    // 2. Greedy owned allocation: one shared pool per (kind, id).
+    let mut pool: HashMap<(LeafKind, u32), i64> = HashMap::new();
+    let mut groups: Vec<ProgressGroup> = Vec::new();
+    for (name, leaves) in &grouped {
+        let mut leaf_progress: Vec<LeafProgress> = Vec::new();
+        let mut g_needed = 0i64;
+        let mut g_owned = 0i64;
+        let mut g_complete = 0usize;
+        for leaf in leaves {
+            let key = (leaf.kind, leaf.id);
+            let remaining = pool.entry(key).or_insert_with(|| owned_of(leaf.kind, leaf.id));
+            let owned_here = (*remaining).min(leaf.quantity);
+            *remaining -= owned_here;
+            let missing = (leaf.quantity - owned_here).max(0);
+            let complete = missing == 0;
+            if complete {
+                g_complete += 1;
+            }
+            g_needed += leaf.quantity;
+            g_owned += owned_here;
+            leaf_progress.push(LeafProgress {
+                kind: leaf.kind,
+                id: leaf.id,
+                name: leaf.name.clone(),
+                needed: leaf.quantity,
+                owned: owned_here,
+                missing,
+                complete,
+            });
+        }
+        leaf_progress.sort_by_key(|b| std::cmp::Reverse(b.missing));
+        let ratio = if g_needed > 0 {
+            g_owned as f64 / g_needed as f64
+        } else {
+            0.0
+        };
+        groups.push(ProgressGroup {
+            name: name.clone(),
+            total_needed: g_needed,
+            total_owned: g_owned,
+            ratio,
+            leaves_total: leaf_progress.len(),
+            leaves_complete: g_complete,
+            leaves: leaf_progress,
+        });
+    }
 
+    // 3. Top-level header from the deduplicated aggregate (semantics unchanged).
+    let needs = aggregate_needs(catalog, recipe);
+    let mut total_needed = 0i64;
+    let mut total_owned = 0i64;
+    let mut leaves_complete = 0usize;
+    for leaf in needs.values() {
+        let owned = owned_of(leaf.kind, leaf.id);
+        total_needed += leaf.needed;
+        total_owned += owned.min(leaf.needed);
+        if owned >= leaf.needed {
+            leaves_complete += 1;
+        }
+    }
     let ratio = if total_needed > 0 {
-        total_owned_capped as f64 / total_needed as f64
+        total_owned as f64 / total_needed as f64
     } else {
         0.0
     };
@@ -198,11 +270,11 @@ pub fn compute_progress(
     LegendaryProgress {
         collection_key: recipe.collection_key.clone(),
         total_needed,
-        total_owned: total_owned_capped,
+        total_owned,
         ratio,
         leaves_total: needs.len(),
         leaves_complete,
-        top_missing: missing_list,
+        groups,
     }
 }
 
@@ -210,10 +282,18 @@ pub fn compute_progress(
 mod tests {
     use super::*;
 
+    fn leaf(kind: LeafKind, id: u32, qty: i64, name: &str, group: Option<&str>) -> RecipeLeaf {
+        RecipeLeaf {
+            kind,
+            id,
+            quantity: qty,
+            name: name.into(),
+            notes: None,
+            group: group.map(|s| s.to_string()),
+        }
+    }
+
     fn cat() -> RecipeCatalog {
-        // Minimal in-memory catalog for unit tests, independent of the
-        // shipped JSON. The embedded JSON is exercised separately by
-        // `embedded_recipes_parse`.
         let mut components = HashMap::new();
         components.insert(
             "test_gift".to_string(),
@@ -221,20 +301,8 @@ mod tests {
                 name: "Test Gift".into(),
                 description: None,
                 leaves: vec![
-                    RecipeLeaf {
-                        kind: LeafKind::Item,
-                        id: 100,
-                        quantity: 250,
-                        name: "Ecto".into(),
-                        notes: None,
-                    },
-                    RecipeLeaf {
-                        kind: LeafKind::Currency,
-                        id: 1,
-                        quantity: 50000,
-                        name: "Coin".into(),
-                        notes: None,
-                    },
+                    leaf(LeafKind::Item, 100, 250, "Ecto", None),
+                    leaf(LeafKind::Currency, 1, 50000, "Coin", None),
                 ],
             },
         );
@@ -244,13 +312,7 @@ mod tests {
             legendaries: vec![LegendaryRecipe {
                 collection_key: "bolt".into(),
                 components: vec!["test_gift".into()],
-                leaves: vec![RecipeLeaf {
-                    kind: LeafKind::Item,
-                    id: 200,
-                    quantity: 1,
-                    name: "Zap".into(),
-                    notes: None,
-                }],
+                leaves: vec![leaf(LeafKind::Item, 200, 1, "Zap", None)],
                 notes: None,
             }],
         }
@@ -268,44 +330,64 @@ mod tests {
     }
 
     #[test]
-    fn progress_caps_owned_at_needed_and_lists_missing() {
+    fn groups_follow_component_then_direct_order() {
         let c = cat();
-        let r = &c.legendaries[0];
-        let owned_items: HashMap<u32, i64> = [(100, 999), (200, 0)].into_iter().collect();
-        let owned_currencies: HashMap<u32, i64> = [(1, 25000)].into_iter().collect();
-
-        let p = compute_progress(&c, r, &owned_items, &owned_currencies, 5);
-        // ecto: 999 owned, 250 needed → capped at 250
-        // coin: 25000 owned, 50000 needed → 25000 capped (still missing 25000)
-        // zap: 0 owned, 1 needed → missing 1
-        assert_eq!(p.total_needed, 250 + 50000 + 1);
-        assert_eq!(p.total_owned, 250 + 25000);
-        assert_eq!(p.leaves_complete, 1, "only ecto is complete");
-        assert_eq!(p.top_missing.len(), 2);
-        // largest missing first → coin (25000) before zap (1)
-        assert_eq!(p.top_missing[0].id, 1);
-        assert_eq!(p.top_missing[0].missing, 25000);
-        assert_eq!(p.top_missing[1].id, 200);
-        assert_eq!(p.top_missing[1].missing, 1);
+        let p = compute_progress(&c, &c.legendaries[0], &HashMap::new(), &HashMap::new());
+        assert_eq!(p.groups.len(), 2);
+        assert_eq!(p.groups[0].name, "Test Gift");
+        assert_eq!(p.groups[1].name, "Specific");
+        assert_eq!(p.groups[1].leaves.len(), 1);
+        assert_eq!(p.groups[1].leaves[0].id, 200);
     }
 
     #[test]
-    fn progress_truncates_missing_to_top_n() {
+    fn header_totals_match_dedup_aggregate() {
+        let c = cat();
+        let owned_items: HashMap<u32, i64> = [(100, 999), (200, 0)].into_iter().collect();
+        let owned_currencies: HashMap<u32, i64> = [(1, 25000)].into_iter().collect();
+        let p = compute_progress(&c, &c.legendaries[0], &owned_items, &owned_currencies);
+        // ecto 250 (complete), coin 25000/50000, zap 0/1
+        assert_eq!(p.total_needed, 250 + 50000 + 1);
+        assert_eq!(p.total_owned, 250 + 25000);
+        assert_eq!(p.leaves_total, 3);
+        assert_eq!(p.leaves_complete, 1);
+        let group_owned: i64 = p.groups.iter().map(|g| g.total_owned).sum();
+        assert_eq!(group_owned, p.total_owned, "per-group owned must reconcile with header");
+    }
+
+    #[test]
+    fn direct_leaves_group_by_label_first_seen_order() {
+        let cat = RecipeCatalog {
+            meta: serde_json::Value::Null,
+            components: HashMap::new(),
+            legendaries: vec![LegendaryRecipe {
+                collection_key: "x".into(),
+                components: vec![],
+                leaves: vec![
+                    leaf(LeafKind::Item, 1, 10, "A", Some("Living World S3")),
+                    leaf(LeafKind::Item, 2, 10, "B", None),
+                    leaf(LeafKind::Item, 3, 10, "C", Some("Living World S3")),
+                ],
+                notes: None,
+            }],
+        };
+        let p = compute_progress(&cat, &cat.legendaries[0], &HashMap::new(), &HashMap::new());
+        assert_eq!(p.groups.len(), 2);
+        assert_eq!(p.groups[0].name, "Living World S3");
+        assert_eq!(p.groups[0].leaves.len(), 2);
+        assert_eq!(p.groups[1].name, "Specific");
+        assert_eq!(p.groups[1].leaves.len(), 1);
+    }
+
+    #[test]
+    fn owned_allocated_greedily_across_groups_in_order() {
         let mut components = HashMap::new();
         components.insert(
-            "big".into(),
+            "g".into(),
             Component {
-                name: "Big".into(),
+                name: "G".into(),
                 description: None,
-                leaves: (1..=10)
-                    .map(|i| RecipeLeaf {
-                        kind: LeafKind::Item,
-                        id: 1000 + i,
-                        quantity: 100,
-                        name: format!("Item {i}"),
-                        notes: None,
-                    })
-                    .collect(),
+                leaves: vec![leaf(LeafKind::Item, 100, 60, "Shared", None)],
             },
         );
         let cat = RecipeCatalog {
@@ -313,21 +395,49 @@ mod tests {
             components,
             legendaries: vec![LegendaryRecipe {
                 collection_key: "x".into(),
-                components: vec!["big".into()],
-                leaves: vec![],
+                components: vec!["g".into()],
+                leaves: vec![leaf(LeafKind::Item, 100, 60, "Shared", Some("Extra"))],
                 notes: None,
             }],
         };
-        let p = compute_progress(
-            &cat,
-            &cat.legendaries[0],
-            &HashMap::new(),
-            &HashMap::new(),
-            5,
-        );
-        assert_eq!(p.top_missing.len(), 5);
-        assert_eq!(p.leaves_total, 10);
-        assert_eq!(p.leaves_complete, 0);
+        let owned: HashMap<u32, i64> = [(100, 80)].into_iter().collect();
+        let p = compute_progress(&cat, &cat.legendaries[0], &owned, &HashMap::new());
+        let g = p.groups.iter().find(|x| x.name == "G").unwrap();
+        let e = p.groups.iter().find(|x| x.name == "Extra").unwrap();
+        assert_eq!(g.leaves[0].owned, 60, "first group filled first");
+        assert_eq!(g.leaves[0].missing, 0);
+        assert_eq!(e.leaves[0].owned, 20, "second group gets the remainder");
+        assert_eq!(e.leaves[0].missing, 40);
+        assert_eq!(p.total_needed, 120);
+        assert_eq!(p.total_owned, 80);
+        assert_eq!(g.total_owned + e.total_owned, 80);
+    }
+
+    #[test]
+    fn group_leaves_sorted_missing_desc_complete_last() {
+        let cat = RecipeCatalog {
+            meta: serde_json::Value::Null,
+            components: HashMap::new(),
+            legendaries: vec![LegendaryRecipe {
+                collection_key: "x".into(),
+                components: vec![],
+                leaves: vec![
+                    leaf(LeafKind::Item, 1, 10, "small", Some("G")),
+                    leaf(LeafKind::Item, 2, 1000, "big", Some("G")),
+                    leaf(LeafKind::Item, 3, 5, "done", Some("G")),
+                ],
+                notes: None,
+            }],
+        };
+        let owned: HashMap<u32, i64> = [(3, 5)].into_iter().collect();
+        let p = compute_progress(&cat, &cat.legendaries[0], &owned, &HashMap::new());
+        let g = &p.groups[0];
+        assert_eq!(g.leaves[0].id, 2);
+        assert_eq!(g.leaves[1].id, 1);
+        assert_eq!(g.leaves[2].id, 3);
+        assert!(g.leaves[2].complete);
+        assert_eq!(g.leaves_complete, 1);
+        assert_eq!(g.leaves_total, 3);
     }
 
     #[test]
@@ -335,7 +445,8 @@ mod tests {
         let cat = load().expect("legendary_recipes.json should parse");
         assert!(!cat.components.is_empty(), "expected at least one component");
         assert!(!cat.legendaries.is_empty(), "expected at least one legendary");
-        // Sanity: every legendary's referenced components exist.
+        let component_names: std::collections::HashSet<&str> =
+            cat.components.values().map(|c| c.name.as_str()).collect();
         for rec in &cat.legendaries {
             for k in &rec.components {
                 assert!(
@@ -343,6 +454,16 @@ mod tests {
                     "legendary {} references unknown component {k}",
                     rec.collection_key
                 );
+            }
+            for leaf in &rec.leaves {
+                if let Some(g) = &leaf.group {
+                    assert!(!g.is_empty(), "empty group label in {}", rec.collection_key);
+                    assert!(
+                        !component_names.contains(g.as_str()),
+                        "direct-leaf group {g} in {} collides with a component name",
+                        rec.collection_key
+                    );
+                }
             }
         }
     }
