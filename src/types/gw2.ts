@@ -144,13 +144,24 @@ export type LegendaryCollection = {
 
 export type LeafKind = "item" | "currency";
 
-export type MissingLeaf = {
+export type LeafProgress = {
   kind: LeafKind;
   id: number;
   name: string;
   needed: number;
   owned: number;
   missing: number;
+  complete: boolean;
+};
+
+export type ProgressGroup = {
+  name: string;
+  total_needed: number;
+  total_owned: number;
+  ratio: number;
+  leaves_total: number;
+  leaves_complete: number;
+  leaves: LeafProgress[];
 };
 
 export type LegendaryProgress = {
@@ -160,7 +171,7 @@ export type LegendaryProgress = {
   ratio: number;
   leaves_total: number;
   leaves_complete: number;
-  top_missing: MissingLeaf[];
+  groups: ProgressGroup[];
 };
 
 export type PinnedBit = {
