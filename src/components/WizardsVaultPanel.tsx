@@ -7,6 +7,33 @@ type Props = {
   period: WizardsVaultPeriod | null;
 };
 
+/** Fixed display order for objective tracks; anything else buckets into "Other". */
+const TRACK_ORDER = ["PvE", "PvP", "WvW", "Fractals"];
+const OTHER_TRACK = "Other";
+
+function isDone(o: WizardsVaultObjective): boolean {
+  return o.progress_current >= o.progress_complete;
+}
+
+/**
+ * Bucket objectives by `track` in TRACK_ORDER, with unknown/empty tracks last
+ * under "Other". Empty buckets are omitted.
+ */
+export function groupByTrack(
+  objectives: WizardsVaultObjective[],
+): { track: string; objectives: WizardsVaultObjective[] }[] {
+  const buckets = new Map<string, WizardsVaultObjective[]>();
+  for (const o of objectives) {
+    const key = TRACK_ORDER.includes(o.track) ? o.track : OTHER_TRACK;
+    const arr = buckets.get(key) ?? [];
+    arr.push(o);
+    buckets.set(key, arr);
+  }
+  return [...TRACK_ORDER, OTHER_TRACK]
+    .filter((t) => buckets.has(t))
+    .map((t) => ({ track: t, objectives: buckets.get(t)! }));
+}
+
 function ObjectiveRow({ o }: { o: WizardsVaultObjective }) {
   const ratio =
     o.progress_complete === 0 ? 0 : Math.min(1, o.progress_current / o.progress_complete);
@@ -39,6 +66,58 @@ function ObjectiveRow({ o }: { o: WizardsVaultObjective }) {
   );
 }
 
+function TrackSection({
+  track,
+  objectives,
+}: {
+  track: string;
+  objectives: WizardsVaultObjective[];
+}) {
+  const done = objectives.filter(isDone).length;
+  const complete = done === objectives.length;
+  const [open, setOpen] = useState(true);
+  // Incomplete ("missing") objectives first, completed ones after.
+  const ordered = [...objectives].sort((a, b) => Number(isDone(a)) - Number(isDone(b)));
+
+  // A fully-complete track collapses to a static ✓ header with no rows
+  // (no dead toggle button).
+  if (complete) {
+    return (
+      <div className="mt-1 flex items-center justify-between text-[11px] opacity-60 px-1">
+        <span className="font-semibold">✓ {track}</span>
+        <span className="font-mono">
+          {done}/{objectives.length}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center justify-between w-full text-left text-[11px] opacity-80 hover:opacity-100 px-1"
+      >
+        <span className="font-semibold">
+          {open ? "▾ " : "▸ "}
+          {track}
+        </span>
+        <span className="font-mono opacity-60">
+          {done}/{objectives.length}
+        </span>
+      </button>
+      {open && (
+        <ul className="ml-1">
+          {ordered.map((o) => (
+            <ObjectiveRow key={o.id} o={o} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function WizardsVaultPanel({ label, period }: Props) {
   const [open, setOpen] = useState(true);
 
@@ -50,9 +129,8 @@ export function WizardsVaultPanel({ label, period }: Props) {
     );
   }
 
-  const done = period.objectives.filter(
-    (o) => o.progress_current >= o.progress_complete,
-  ).length;
+  const done = period.objectives.filter(isDone).length;
+  const groups = groupByTrack(period.objectives);
 
   return (
     <div className="px-3 py-1.5 text-xs">
@@ -69,11 +147,11 @@ export function WizardsVaultPanel({ label, period }: Props) {
         </span>
       </button>
       {open && (
-        <ul className="mt-1 ml-1">
-          {period.objectives.map((o) => (
-            <ObjectiveRow key={o.id} o={o} />
+        <div className="mt-1 ml-1">
+          {groups.map((g) => (
+            <TrackSection key={g.track} track={g.track} objectives={g.objectives} />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
