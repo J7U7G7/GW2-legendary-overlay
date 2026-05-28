@@ -151,6 +151,53 @@ snapshot, and re-validate the key tolerantly — a transient
 
 ---
 
+## Uninstall
+
+### If you installed a release (the .exe / .msi)
+
+Use Windows' normal flow: **Settings → Apps → Installed apps → GW2
+Legendary Overlay → Uninstall** (or Control Panel → Programs). That
+removes the program files. It does **not** remove your data — see the
+"Data + leftovers" step below to wipe that too.
+
+### If you ran it from source (npm / cargo commands)
+
+There's no installer to remove — `npm run tauri dev` and `npm run
+tauri build` run/produce the app in place. To fully clean up:
+
+```powershell
+# 1. Quit the app (the ⏻ button in the main header, or close the
+#    main window). Make sure no gw2-overlay process is running:
+Get-Process gw2-overlay -ErrorAction SilentlyContinue | Stop-Process
+
+# 2. Delete the cloned repo + its build artifacts (adjust the path):
+Remove-Item -Recurse -Force "C:\path\to\gw2-overlay"
+#   (this includes node_modules\, dist\, and src-tauri\target\ — the
+#    Rust build cache alone is several GB)
+```
+
+### Data + leftovers (both install methods)
+
+The app keeps everything user-specific under one AppData folder.
+Removing it resets the app to a clean slate (you'd re-enter your API
+key on next launch):
+
+```powershell
+# SQLite DB (API key, pins, todos, caches), logs, window-state file:
+Remove-Item -Recurse -Force "$env:APPDATA\com.tripleseptconsulting.gw2overlay"
+```
+
+The encrypted API key is DPAPI-bound to your Windows user, so deleting
+the SQLite file is enough — nothing leaks elsewhere. The app registers
+**no** services, scheduled tasks, registry keys, or startup entries.
+Global hotkeys are unregistered automatically when the app exits.
+
+If you generated an updater signing key while developing (only
+relevant if you built + tagged your own releases), it lives at
+`%USERPROFILE%\.gw2-overlay-updater\` and can be deleted too.
+
+---
+
 ## Default hotkeys
 
 | Shortcut | Effect |

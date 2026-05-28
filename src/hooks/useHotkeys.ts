@@ -1,7 +1,10 @@
 import { useEffect } from "react";
 import { register, unregisterAll } from "@tauri-apps/plugin-global-shortcut";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import {
+  WebviewWindow,
+  getAllWebviewWindows,
+} from "@tauri-apps/api/webviewWindow";
 import { listen } from "@tauri-apps/api/event";
 
 import { api } from "../lib/tauri";
@@ -32,7 +35,20 @@ async function toggleVisibility() {
 
 async function toggleClickThrough() {
   clickThroughOn = !clickThroughOn;
-  await getCurrentWindow().setIgnoreCursorEvents(clickThroughOn);
+  // Apply to ALL three overlay windows, not just the one whose JS context
+  // registered the global shortcut. `useHotkeys` only runs in the main
+  // window, so `getCurrentWindow()` was always 'main' — the bosses +
+  // achievements windows never toggled. The global shortcut still fires
+  // even when every window is click-through, so pressing the combo again
+  // restores interactivity everywhere.
+  const windows = await getAllWebviewWindows();
+  await Promise.all(
+    windows.map((w) =>
+      w.setIgnoreCursorEvents(clickThroughOn).catch((err) =>
+        console.warn(`setIgnoreCursorEvents failed for ${w.label}:`, err),
+      ),
+    ),
+  );
 }
 
 async function toggleWindowByLabel(label: string) {
