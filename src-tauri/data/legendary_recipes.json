@@ -1,8 +1,9 @@
 {
   "_meta": {
     "description": "Curated legendary recipe components + per-legendary references. Recipes are intentionally one-level-deep (the curator decides which sub-gifts to expand into leaves vs. leave as 'specific work'). Item IDs sourced from https://wiki.guildwars2.com/ and verified against https://api.guildwars2.com/v2/items?ids=... — items with uncertain IDs are marked in `notes`. Add new legendaries by referencing existing components + adding the precursor + signature high-value ingredients as direct leaves.",
-    "format_version": "1.3",
-    "last_updated": "2026-05-26",
+    "format_version": "1.4",
+    "group_field_note": "1.4 adds an optional `group` field on direct leaves. Component leaves are grouped by the component name; unlabelled direct leaves fall into the 'Specific' bucket. A direct-leaf group label must not equal a component name.",
+    "last_updated": "2026-05-28",
     "verification_method": "GET /v2/items?ids=<csv>&lang=en — compare returned name to the leaf name field",
     "scope_note": "All 32 legendary collections covered. Shared components: gift_of_fortune, gift_of_mastery, mystic_tribute, gen1_signature, vision_crystal. As of 1.2 the vision_crystal component flattens to its raw upstream mats (Bloodstone Dust ×100, Dragonite Ore ×100, Empyreal Fragment ×100, Augur's Stone) since players typically hold the raw form rather than tier-6 intermediates. 1.3 additions: (a) Aurora/Vision/Coalescence now carry the real LWS3/LWS4/raid-PoF map currencies and items (Blood Ruby, Petrified Wood, Kralkatite Ore, Funerary Incense, etc.) as direct leaves, replacing the v1.2 low-fidelity placeholders; (b) Ad Infinitum carries an expanded fractal spend (Pristine Fractal Relics, agony infusions, ecto); (c) the Gen 1 craftable precursors howler and frostfang now carry bulk ascended mat leaves (Deldrimor Steel, Spiritwood Plank, Elonian Leather, ecto); (d) Gen 2 weapons (astralaria, hope, nevermore, chuka_and_champawat) now multiply Vision Crystal needs ×4 by carrying 3 additional Bloodstone Dust/Dragonite/Empyreal/Augur's Stone direct leaves on top of the 1× shared vision_crystal component."
   },
@@ -314,14 +315,14 @@
       "collection_key": "aurora",
       "components": ["mystic_tribute"],
       "leaves": [
-        { "kind": "currency", "id": 32, "quantity": 1000, "name": "Unbound Magic", "notes": "approximate aggregate spend across all 6 LWS3 collection chapters (vendor purchases, key sinks, etc.)" },
+        { "kind": "currency", "id": 32, "quantity": 1000, "name": "Unbound Magic", "notes": "approximate aggregate spend across all 6 LWS3 collection chapters (vendor purchases, key sinks, etc.)", "group": "Living World S3" },
         { "kind": "item", "id": 79184, "quantity": 1, "name": "Bloodstone Capacitor", "notes": "purchased from Scholar Rakka in Bloodstone Fen for 100 Unbound Magic — referenced via the Aurora collection" },
-        { "kind": "item", "id": 79280, "quantity": 250, "name": "Blood Ruby", "notes": "Bloodstone Fen (Gift of Draconic Mastery) — approximate per-map spend" },
-        { "kind": "item", "id": 79469, "quantity": 250, "name": "Petrified Wood", "notes": "Ember Bay — approximate per-map spend" },
-        { "kind": "item", "id": 79899, "quantity": 250, "name": "Fresh Winterberry", "notes": "Bitterfrost Frontier — approximate per-map spend" },
-        { "kind": "item", "id": 80332, "quantity": 250, "name": "Jade Shard", "notes": "Lake Doric — approximate per-map spend" },
-        { "kind": "item", "id": 81706, "quantity": 250, "name": "Orrian Pearl", "notes": "Siren's Landing — approximate per-map spend" },
-        { "kind": "item", "id": 81127, "quantity": 250, "name": "Fire Orchid Blossom", "notes": "Draconis Mons — approximate per-map spend" },
+        { "kind": "item", "id": 79280, "quantity": 250, "name": "Blood Ruby", "notes": "Bloodstone Fen (Gift of Draconic Mastery) — approximate per-map spend", "group": "Living World S3" },
+        { "kind": "item", "id": 79469, "quantity": 250, "name": "Petrified Wood", "notes": "Ember Bay — approximate per-map spend", "group": "Living World S3" },
+        { "kind": "item", "id": 79899, "quantity": 250, "name": "Fresh Winterberry", "notes": "Bitterfrost Frontier — approximate per-map spend", "group": "Living World S3" },
+        { "kind": "item", "id": 80332, "quantity": 250, "name": "Jade Shard", "notes": "Lake Doric — approximate per-map spend", "group": "Living World S3" },
+        { "kind": "item", "id": 81706, "quantity": 250, "name": "Orrian Pearl", "notes": "Siren's Landing — approximate per-map spend", "group": "Living World S3" },
+        { "kind": "item", "id": 81127, "quantity": 250, "name": "Fire Orchid Blossom", "notes": "Draconis Mons — approximate per-map spend", "group": "Living World S3" },
         { "kind": "item", "id": 19925, "quantity": 250, "name": "Obsidian Shard", "notes": "approximate, mostly for Mystic Clover crafting overflow" }
       ],
       "notes": "LWS3 trinket. Built purely through a long collection chain (no Mystic Forge final step). Real progress lives in the 24 collection steps; quantities listed are wiki-based approximations of the largest spend per map currency."
@@ -330,14 +331,14 @@
       "collection_key": "vision",
       "components": ["mystic_tribute"],
       "leaves": [
-        { "kind": "currency", "id": 45, "quantity": 1000, "name": "Volatile Magic", "notes": "approximate aggregate across LWS4 maps (Trance Stone unlock + vendor purchases)" },
-        { "kind": "currency", "id": 35, "quantity": 100, "name": "Elegy Mosaic", "notes": "PoF / LWS4 universal currency — approximate spend across the collection" },
-        { "kind": "item", "id": 86069, "quantity": 100, "name": "Kralkatite Ore", "notes": "Domain of Istan — wiki: 100 needed for Vision crafting steps" },
-        { "kind": "item", "id": 86977, "quantity": 100, "name": "Difluorite Crystal", "notes": "Sandswept Isles — wiki: 100 needed" },
-        { "kind": "item", "id": 87645, "quantity": 100, "name": "Inscribed Shard", "notes": "Domain of Kourna — wiki: 100 needed" },
-        { "kind": "item", "id": 88955, "quantity": 100, "name": "Lump of Mistonium", "notes": "Jahai Bluffs — wiki: 100 needed" },
-        { "kind": "item", "id": 89537, "quantity": 100, "name": "Branded Mass", "notes": "Thunderhead Peaks — wiki: 100 needed" },
-        { "kind": "item", "id": 90783, "quantity": 100, "name": "Mistborn Mote", "notes": "Dragonfall — wiki: 100 needed" },
+        { "kind": "currency", "id": 45, "quantity": 1000, "name": "Volatile Magic", "notes": "approximate aggregate across LWS4 maps (Trance Stone unlock + vendor purchases)", "group": "Living World S4" },
+        { "kind": "currency", "id": 35, "quantity": 100, "name": "Elegy Mosaic", "notes": "PoF / LWS4 universal currency — approximate spend across the collection", "group": "Living World S4" },
+        { "kind": "item", "id": 86069, "quantity": 100, "name": "Kralkatite Ore", "notes": "Domain of Istan — wiki: 100 needed for Vision crafting steps", "group": "Living World S4" },
+        { "kind": "item", "id": 86977, "quantity": 100, "name": "Difluorite Crystal", "notes": "Sandswept Isles — wiki: 100 needed", "group": "Living World S4" },
+        { "kind": "item", "id": 87645, "quantity": 100, "name": "Inscribed Shard", "notes": "Domain of Kourna — wiki: 100 needed", "group": "Living World S4" },
+        { "kind": "item", "id": 88955, "quantity": 100, "name": "Lump of Mistonium", "notes": "Jahai Bluffs — wiki: 100 needed", "group": "Living World S4" },
+        { "kind": "item", "id": 89537, "quantity": 100, "name": "Branded Mass", "notes": "Thunderhead Peaks — wiki: 100 needed", "group": "Living World S4" },
+        { "kind": "item", "id": 90783, "quantity": 100, "name": "Mistborn Mote", "notes": "Dragonfall — wiki: 100 needed", "group": "Living World S4" },
         { "kind": "item", "id": 19925, "quantity": 100, "name": "Obsidian Shard" }
       ],
       "notes": "LWS4 trinket built through the Vision I+II collection chain. Per the wiki Vision needs 100 of each LWS4 map currency item. Volatile Magic + Elegy Mosaic quantities are approximations of the aggregate vendor / unlock spend."
