@@ -450,6 +450,54 @@ mod tests {
     }
 
     #[test]
+    fn owned_pool_shared_across_two_components() {
+        // Item 500 is needed by two different components of the same recipe:
+        // comp A wants 2, comp B wants 1 (total 3). User owns 2.
+        let mut components = HashMap::new();
+        components.insert(
+            "a".into(),
+            Component {
+                name: "Comp A".into(),
+                description: None,
+                leaves: vec![leaf(LeafKind::Item, 500, 2, "Shard", None)],
+            },
+        );
+        components.insert(
+            "b".into(),
+            Component {
+                name: "Comp B".into(),
+                description: None,
+                leaves: vec![leaf(LeafKind::Item, 500, 1, "Shard", None)],
+            },
+        );
+        let cat = RecipeCatalog {
+            meta: serde_json::Value::Null,
+            components,
+            legendaries: vec![LegendaryRecipe {
+                collection_key: "x".into(),
+                components: vec!["a".into(), "b".into()],
+                leaves: vec![],
+                notes: None,
+            }],
+        };
+        let owned: HashMap<u32, i64> = [(500, 2)].into_iter().collect();
+        let p = compute_progress(&cat, &cat.legendaries[0], &owned, &HashMap::new());
+        let a = p.groups.iter().find(|g| g.name == "Comp A").unwrap();
+        let b = p.groups.iter().find(|g| g.name == "Comp B").unwrap();
+        // Greedy: Comp A (first) takes 2 of 2 (complete); Comp B gets the 0 remainder.
+        assert_eq!(a.leaves[0].owned, 2);
+        assert_eq!(a.leaves[0].missing, 0);
+        assert_eq!(b.leaves[0].owned, 0);
+        assert_eq!(b.leaves[0].missing, 1);
+        // Header dedups id 500: needed 3, owned capped at 2.
+        assert_eq!(p.total_needed, 3);
+        assert_eq!(p.total_owned, 2);
+        assert_eq!(p.leaves_total, 1, "id 500 counts once in the dedup header");
+        // Per-group owned reconciles with header.
+        assert_eq!(a.total_owned + b.total_owned, p.total_owned);
+    }
+
+    #[test]
     fn embedded_recipes_parse() {
         let cat = load().expect("legendary_recipes.json should parse");
         assert!(!cat.components.is_empty(), "expected at least one component");

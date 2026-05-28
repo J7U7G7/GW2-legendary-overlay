@@ -112,7 +112,7 @@ function RecipeProgressBlock({ progress }: { progress: LegendaryProgress }) {
           All tracked leaves complete. Remaining work is in achievement steps.
         </p>
       ) : (
-        progress.groups.map((g) => <GroupSection key={g.name} group={g} />)
+        progress.groups.map((g, i) => <GroupSection key={`${i}:${g.name}`} group={g} />)
       )}
     </div>
   );
